@@ -349,7 +349,7 @@ export const FileCard = ({ file, onRefresh }: FileCardProps) => {
           </button>
           
           {showActions && (
-            <div className="absolute right-0 top-8 glass rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+            <div className="absolute right-0 top-8 glass rounded-lg shadow-lg border border-gray-700/30 z-20 py-1 min-w-[140px] backdrop-blur-md bg-black/40">
               {file.file_type === 'image' && (
                 <button
                   onClick={(e) => {
@@ -392,7 +392,7 @@ export const FileCard = ({ file, onRefresh }: FileCardProps) => {
         {/* Metadata Overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-4">
           <div className="text-white">
-            <div className="flex items-center justify-between text-xs text-gray-300">
+            <div className="flex items-center justify-between text-[10px] sm:text-xs text-gray-300">
               {file.file_type !== 'image' && file.file_type !== 'video' && (
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getFileTypeColor(file.file_type)}`}>
                   {file.file_type.toUpperCase()}
@@ -425,4 +425,4 @@ export const FileCard = ({ file, onRefresh }: FileCardProps) => {
       />
     </>
   );
-}; 
+};

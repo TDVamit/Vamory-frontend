@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { X, FolderPlus } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
+import { useAuth } from '../hooks/useAuth';
 import type { CreateFolderRequest } from '../types';
+import { UserRole } from '../types';
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -11,6 +13,12 @@ interface CreateFolderModalProps {
 }
 
 export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }: CreateFolderModalProps) => {
+  const { user } = useAuth();
+  // Allow super_admin to have all admin privileges
+  const canCreateFolder = user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user;
+  // Don't render modal if not allowed
+  if (!isOpen || !canCreateFolder) return null;
+
   const [formData, setFormData] = useState({
     name: '',
     storage_type: 'STANDARD_IA' as const,
@@ -62,14 +70,12 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
     }));
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 surface-dark/80 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="glass rounded-xl p-8 w-full max-w-md mx-4 glow-border">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="glass bg-black/40 rounded-xl p-8 w-full max-w-md mx-4 border border-gray-700/40">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-700/30 backdrop-blur-sm rounded-lg border border-gray-600/20">
+            <div className="p-2 bg-black/30 rounded-lg border border-gray-700/30">
               <FolderPlus className="w-5 h-5 text-gray-400" />
             </div>
             <div>
@@ -87,7 +93,7 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-900/30 backdrop-blur-sm border border-red-700/40 rounded-lg p-3">
+            <div className="bg-red-900/30 border border-red-700/40 rounded-lg p-3">
               <p className="text-red-300 text-sm">{error}</p>
             </div>
           )}
@@ -152,4 +158,4 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
       </div>
     </div>
   );
-}; 
+};

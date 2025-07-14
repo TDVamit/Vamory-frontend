@@ -140,10 +140,7 @@ export const Gallery = () => {
   return (
     <div className="min-h-screen surface-dark overflow-x-hidden">
       {/* Header */}
-      <Header 
-        onCreateFolder={() => setIsCreateModalOpen(true)} 
-        showCreateButton={true}
-      />
+      <Header />
 
       {/* Hero Section - Folder Carousel - Full Width */}
       <div className="relative h-[60vh]">
@@ -177,19 +174,9 @@ export const Gallery = () => {
                     
                     {/* Main Folder Name Display */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center px-8">
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-white mb-4 tracking-wide flex items-center justify-center gap-3">
-                          {folder.name}
-                          {folder.shared_by_name && (
-                            <span className="relative group/share flex-shrink-0">
-                              <Users className="w-7 h-7 text-black" />
-                              <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-50 px-3 py-1 rounded bg-black text-white text-xs opacity-0 group-hover/share:opacity-100 pointer-events-none whitespace-nowrap transition-opacity duration-200 shadow-lg" style={{top: '100%', minWidth: 'max-content'}}>
-                                Shared by {folder.shared_by_name}
-                              </span>
-                            </span>
-                          )}
-                        </h1>
-                        <div className="flex items-center justify-center gap-6 text-lg text-white/80">
+                      <div className="text-center px-8 group/folder">
+                        {/* Details above name, only visible on hover */}
+                        <div className="flex items-center justify-center gap-6 text-lg text-white/80 mb-2 opacity-0 group-hover/folder:opacity-100 transition-opacity duration-300">
                           <span>{folder.file_count || 0} files</span>
                           {folder.subfolder_count ? (
                             <>
@@ -197,7 +184,19 @@ export const Gallery = () => {
                               <span>{folder.subfolder_count} folders</span>
                             </>
                           ) : null}
+                          {folder.shared_by_name && (
+                            <span className="relative group/share flex-shrink-0">
+                              <Users className="w-7 h-7 text-black inline-block align-middle" />
+                              <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-50 px-3 py-1 rounded bg-black text-white text-xs opacity-0 group-hover/share:opacity-100 pointer-events-none whitespace-nowrap transition-opacity duration-200 shadow-lg" style={{top: '100%', minWidth: 'max-content'}}>
+                                Shared by {folder.shared_by_name}
+                              </span>
+                            </span>
+                          )}
                         </div>
+                        {/* Folder name below, always visible */}
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-white tracking-wide">
+                          {folder.name}
+                        </h1>
                       </div>
                     </div>
                     
@@ -259,7 +258,7 @@ export const Gallery = () => {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 pb-12 pt-20">
+      <main className="max-w-7xl mx-auto px-6 pb-12 pt-20 overflow-x-hidden">
         {error && (
           <div className="mb-6 bg-red-900/30 backdrop-blur-sm border border-red-700/40 rounded-xl p-4">
             <p className="text-red-300">{error}</p>
@@ -298,7 +297,7 @@ export const Gallery = () => {
                 <h3 className="text-lg font-light text-white mb-6">
                   {searchQuery ? `Search Results (${folders.length})` : 'All Folders'}
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-6">
                   {folders.map((folder, index) => (
                     <div
                       key={folder._id}

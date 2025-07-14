@@ -121,8 +121,8 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl shadow-2xl max-w-lg w-full border border-gray-600/20">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+      <div className="glass bg-black/40 rounded-xl shadow-2xl max-w-lg w-full border border-gray-700/40">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700/30">
           <div className="flex items-center gap-3">
@@ -142,8 +142,8 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
           {/* Folder Info */}
           <div className="mb-6">
             <h3 className="text-sm font-medium text-gray-300 mb-2">Sharing</h3>
-            <div className="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-600/20">
-              <div className="w-8 h-8 bg-gray-700/50 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 p-3 bg-black/40 rounded-lg border border-gray-700/30">
+              <div className="w-8 h-8 bg-gray-800/60 rounded-lg flex items-center justify-center">
                 <Share2 className="w-4 h-4 text-gray-400" />
               </div>
               <div>
@@ -166,10 +166,10 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
                 {folder.shared_with.map((userEmail) => (
                   <div
                     key={userEmail}
-                    className="flex items-center justify-between p-3 bg-gray-800/20 rounded-lg border border-gray-600/20"
+                    className="flex items-center justify-between p-3 bg-black/30 rounded-lg border border-gray-700/30"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 bg-gray-800/60 rounded-full flex items-center justify-center">
                         <UserIcon className="w-4 h-4 text-gray-400" />
                       </div>
                       <div className="flex items-center gap-2">
@@ -208,7 +208,7 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
                 placeholder="Search by name or email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-600/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50"
+                className="w-full pl-10 pr-4 py-2 bg-black/40 border border-gray-700/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50"
               />
               {isSearching && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -234,14 +234,22 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
                         onClick={() => setSelectedUser(user)}
                         className={`w-full p-3 rounded-lg border text-left transition-all ${
                           selectedUser?._id === user._id
-                            ? 'bg-gray-700/40 border-gray-500/50 text-white'
-                            : 'bg-gray-800/20 border-gray-600/20 text-gray-300 hover:bg-gray-700/30'
+                            ? 'bg-black/50 border-gray-500/50 text-white'
+                            : 'bg-black/30 border-gray-700/30 text-gray-300 hover:bg-black/40'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
-                            <UserIcon className="w-4 h-4 text-gray-400" />
-                          </div>
+                          {user.profile_pic ? (
+                            <img
+                              src={user.profile_pic.startsWith('data:') ? user.profile_pic : `data:image/webp;base64,${user.profile_pic}`}
+                              alt={user.full_name}
+                              className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
+                              <UserIcon className="w-4 h-4 text-gray-400" />
+                            </div>
+                          )}
                           <div className="flex-1">
                             <div className="font-medium">{user.full_name}</div>
                             <div className="text-sm opacity-75 flex items-center gap-1">
@@ -268,10 +276,18 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
           {selectedUser && (
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-300 mb-2">Selected User</h3>
-              <div className="flex items-center gap-3 p-3 bg-gray-700/30 rounded-lg border border-gray-500/30">
-                <div className="w-8 h-8 bg-gray-600/50 rounded-full flex items-center justify-center">
-                  <UserIcon className="w-4 h-4 text-gray-300" />
-                </div>
+              <div className="flex items-center gap-3 p-3 bg-black/40 rounded-lg border border-gray-700/30">
+                {selectedUser.profile_pic ? (
+                  <img
+                    src={selectedUser.profile_pic.startsWith('data:') ? selectedUser.profile_pic : `data:image/webp;base64,${selectedUser.profile_pic}`}
+                    alt={selectedUser.full_name}
+                    className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-gray-600/50 rounded-full flex items-center justify-center">
+                    <UserIcon className="w-4 h-4 text-gray-300" />
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="text-white font-medium">{selectedUser.full_name}</div>
                   <div className="text-sm text-gray-300">{selectedUser.email}</div>
@@ -302,8 +318,8 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
                       key={level}
                       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                         accessLevel === level
-                          ? 'bg-gray-700/40 border-gray-500/50 text-white'
-                          : 'bg-gray-800/20 border-gray-600/20 text-gray-300 hover:bg-gray-700/30'
+                          ? 'bg-black/50 border-gray-500/50 text-white'
+                          : 'bg-black/30 border-gray-700/30 text-gray-300 hover:bg-black/40'
                       }`}
                     >
                       <input
@@ -338,14 +354,14 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-300 bg-gray-800/30 hover:bg-gray-700/40 transition-colors rounded-lg border border-gray-600/20"
+              className="flex-1 px-4 py-2 text-gray-300 bg-black/30 hover:bg-black/40 transition-colors rounded-lg border border-gray-700/30"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !selectedUser}
-              className="flex-1 px-4 py-2 bg-gray-600/40 text-white hover:bg-gray-500/50 transition-colors rounded-lg border border-gray-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-gray-700/40 text-white hover:bg-gray-600/50 transition-colors rounded-lg border border-gray-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Sharing...' : 'Share Folder'}
             </button>
@@ -354,4 +370,4 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
       </div>
     </div>
   );
-}; 
+};

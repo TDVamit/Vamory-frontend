@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Folder, MoreHorizontal, Trash2, Edit3, RefreshCw, Share2, FileText, Folder as FolderIcon, Database, Users, Info } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -24,6 +25,7 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
   const [showShareModal, setShowShareModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const { deleteFolder, isLoading: isDeleting, error } = useFolderManager();
 
@@ -189,6 +191,18 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
     }
   };
 
+  const updateButtonPosition = () => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      setButtonPosition({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height
+      });
+    }
+  };
+
   // Default folder thumbnail
   const getDefaultThumbnail = () => {
     return (
@@ -245,12 +259,13 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         {/* Actions Menu - Only show for active folders */}
         {canShowActions && (
           <div
-            className={"absolute top-2 right-2 opacity-100 transition-opacity"} ref={menuRef}
-            style={{zIndex: 20, overflow: 'visible'}}
+            className={"absolute top-2 right-2 z-30"} ref={menuRef}
+            style={{ overflow: 'visible' }}
           >
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                updateButtonPosition();
                 setShowActions((prev) => !prev);
               }}
               className="p-1.5 bg-black/60 text-white hover:text-gray-300 transition-colors rounded-lg backdrop-blur-sm"
@@ -258,10 +273,14 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
             >
               <MoreHorizontal className="w-4 h-4" />
             </button>
-            {showActions && (
-              <div className="absolute right-0 top-8 bg-gray-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-20 py-1 min-w-[140px]"
-                onMouseLeave={() => setShowActions(false)}
-                onMouseEnter={() => {}}>
+            {showActions && createPortal(
+              <div 
+                className="fixed bg-gray-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
+                style={{
+                  top: buttonPosition.top + buttonPosition.height + 8,
+                  left: buttonPosition.left + buttonPosition.width - 140,
+                }}
+              >
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -319,21 +338,16 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
                   <Trash2 className="w-4 h-4" />
                   {isDeleting ? 'Deleting...' : 'Delete'}
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         )}
 
         {/* Status Indicator for Non-Active Folders */}
         {effectiveStatus !== 'active' && (
-          <div className={`absolute top-2 left-2 backdrop-blur-sm border rounded-lg px-2 py-1 flex items-center justify-center ${
-            effectiveStatus === 'converting' 
-              ? 'bg-yellow-500/20 border-yellow-500/40' 
-              : 'bg-red-500/20 border-red-500/40'
-          }`}>
-            <span className={`text-xs font-medium ${
-              effectiveStatus === 'converting' ? 'text-yellow-300' : 'text-red-300'
-            }`}>
+          <div className="absolute top-2 left-2 backdrop-blur-sm border border-black bg-black/80 rounded-lg px-2 py-1 flex items-center justify-center">
+            <span className="text-xs font-medium text-white">
               {effectiveStatus === 'converting' ? 'Converting' : 'Inactive'}
             </span>
           </div>
@@ -352,7 +366,7 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         )}
 
         {/* Shared With Others Indicator */}
-        {isSharedWithOthers && !isSharedByOthers && (
+        {false && (
           <div className="absolute top-2 right-12 backdrop-blur-sm border rounded-lg px-2 py-1 flex items-center justify-center bg-green-500/20 border-green-500/40">
             <Share2 className="w-3 h-3 text-green-300 mr-1" />
             <span className="text-xs font-medium text-green-300">
@@ -362,21 +376,32 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         )}
 
         {/* Metadata Overlay: Always show name, show stats only on hover */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-4">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-2">
           <div className="text-white">
-            <h3 className="font-medium text-base mb-2 text-shadow-lg flex items-center gap-2 truncate" title={folder.name} style={{textShadow: '2px 2px 4px rgba(0,0,0,0.8)', maxWidth: '100%'}}>
-              <span className="truncate max-w-[70%]" title={folder.name}>{folder.name}</span>
-            </h3>
-            <div className="flex items-center gap-4 text-xs text-gray-300 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.8)'}}>
-              <span className="flex items-center gap-1"><FileText className="w-4 h-4 text-gray-400" />{folder.file_count || 0}</span>
-              <span className="flex items-center gap-1"><FolderIcon className="w-4 h-4 text-gray-400" />{folder.subfolder_count || 0}</span>
-              {folder.total_size !== undefined && (
-                <span className="flex items-center gap-1"><Database className="w-4 h-4 text-gray-400" />{formatSize(folder.total_size)}</span>
-              )}
-              <span className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${getStorageTypeDotColor(folder.storage_type)} shadow-lg`}></span>
-                <span className={`font-medium ${getStorageTypeColor(folder.storage_type)}`}>{getStorageTypeLabel(folder.storage_type)}</span>
-              </span>
+            <div className="relative h-10 flex items-center" style={{minHeight: '2.5rem'}}>
+              <h3 className={
+                `font-medium text-[11px] xs:text-xs sm:text-sm md:text-base text-shadow-lg flex items-center gap-2 truncate transition-all duration-300 absolute left-0 right-0 w-full ${
+                  'bottom-0 group-hover:top-0 group-hover:bottom-auto top-1/2 group-hover:translate-y-0 translate-y-1/2'
+                }`
+              } title={folder.name} style={{textShadow: '2px 2px 4px rgba(0,0,0,0.8)', maxWidth: '100%'}}>
+                {/* Shared icon before folder name, in white */}
+                {isSharedWithOthers && !isSharedByOthers && (
+                  <span className="flex items-center"><Share2 className="w-4 h-4 text-white" /></span>
+                )}
+                {isSharedByOthers && (
+                  <span className="flex items-center"><Users className="w-4 h-4 text-white" /></span>
+                )}
+                <span className="truncate max-w-[70%]" title={folder.name}>{folder.name}</span>
+              </h3>
+              <div className="flex items-center gap-2 text-[8px] xs:text-[9px] sm:text-xs text-gray-300 justify-start min-w-0 overflow-hidden absolute left-0 right-0 w-full opacity-0 group-hover:opacity-100 transition-all duration-300" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.8)', top: '1.8rem'}}>
+                {folder.total_size !== undefined && (
+                  <span className="flex items-center gap-1 whitespace-nowrap truncate"><Database className="w-4 h-4 text-gray-400" />{formatSize(folder.total_size)}</span>
+                )}
+                <span className="flex items-center gap-1 truncate">
+                  <span className={`w-2 h-2 rounded-full ${getStorageTypeDotColor(folder.storage_type)} shadow-lg`}></span>
+                  <span className={`font-medium ${getStorageTypeColor(folder.storage_type)}`}>{getStorageTypeLabel(folder.storage_type)}</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -409,19 +434,19 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
             </button>
             <div className="flex flex-col items-center mb-8">
               <Folder className="w-16 h-16 text-blue-400 mb-3 drop-shadow" />
-              <h2 className="text-3xl font-semibold text-white mb-2 tracking-wide">Folder Details</h2>
+              <h2 className="text-2xl xs:text-2xl sm:text-3xl font-semibold text-white mb-2 tracking-wide">Folder Details</h2>
               <div className="flex gap-3 mb-4">
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-800/60 text-blue-300 text-sm font-semibold shadow border border-gray-700">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-800/60 text-blue-300 text-xs xs:text-sm font-semibold shadow border border-gray-700">
                   <FileText className="w-4 h-4" />{folder.file_count || 0}
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-800/60 text-blue-300 text-sm font-semibold shadow border border-gray-700">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-800/60 text-blue-300 text-xs xs:text-sm font-semibold shadow border border-gray-700">
                   <FolderIcon className="w-4 h-4" />{folder.subfolder_count || 0}
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-800/60 text-blue-300 text-sm font-semibold shadow border border-gray-700">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-800/60 text-blue-300 text-xs xs:text-sm font-semibold shadow border border-gray-700">
                   <Database className="w-4 h-4" />{folder.total_size !== undefined ? formatSize(folder.total_size) : '0 B'}
                 </span>
               </div>
-              <div className="text-gray-300 text-lg font-bold break-all text-center px-2 mb-1">
+              <div className="text-gray-300 text-xs xs:text-sm sm:text-lg font-bold break-all text-center px-2 mb-1">
                 {folder.name}
               </div>
               {isSharedByOthers && (

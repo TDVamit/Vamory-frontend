@@ -7,6 +7,15 @@ export interface User {
   created_at: string;
   updated_at: string;
   profile_pic?: string; // base64 profile picture
+  user_role?: UserRole;
+}
+
+export enum UserRole {
+  super_admin = "super_admin",
+  admin = "admin",
+  user = "user",
+  viewer = "viewer",
+  editor = "editor"
 }
 
 export interface AuthResponse {
@@ -177,4 +186,4 @@ export interface UserSearchRequest {
   per_page?: number;
   sort_by?: 'full_name' | 'email' | 'created_at';
   sort_order?: 'asc' | 'desc';
-} 
+}

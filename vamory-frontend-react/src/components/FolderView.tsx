@@ -9,6 +9,8 @@ import { FileUpload } from './FileUpload';
 import { Header } from './Header';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MediaGallery } from './MediaGallery';
+import { useAuth } from '../hooks/useAuth';
+import { UserRole } from '../types';
 import type { Folder, FileData } from '../types';
 
 export const FolderView = () => {
@@ -43,6 +45,11 @@ export const FolderView = () => {
   const [isLoadingMoreFolders, setIsLoadingMoreFolders] = useState(false);
   const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const { user } = useAuth();
+  const userRole = user?.user_role;
+  const canCreateFolder = userRole === UserRole.admin || userRole === UserRole.user;
+  const canUpload = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user || userRole === UserRole.editor;
 
   useEffect(() => {
     if (folderId) {
@@ -400,10 +407,6 @@ export const FolderView = () => {
   if (isLoading && !currentFolder) {
     return (
       <div className="min-h-screen surface-dark">
-        <Header 
-          onCreateFolder={() => setIsCreateModalOpen(true)} 
-          showCreateButton={true}
-        />
         <div className="pt-20 flex items-center justify-center py-16">
           <div className="flex items-center gap-3 text-gray-400 bg-gray-800/30 backdrop-blur-sm px-6 py-3 rounded-xl border border-gray-600/20">
             <div className="w-6 h-6 border-2 border-gray-500/30 border-t-gray-400 rounded-full animate-spin" />
@@ -417,10 +420,7 @@ export const FolderView = () => {
   return (
     <div className="min-h-screen surface-dark">
       {/* Header */}
-      <Header 
-        onCreateFolder={() => setIsCreateModalOpen(true)} 
-        showCreateButton={true}
-      />
+      <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
         {/* Navigation */}
@@ -449,7 +449,7 @@ export const FolderView = () => {
                   <ChevronRight className="w-4 h-4 text-gray-500" />
                   <button
                     onClick={() => handleFolderNavigation(crumb._id)}
-                    className="text-gray-400 hover:text-gray-200 transition-colors"
+                    className="text-xs sm:text-sm text-gray-400 hover:text-gray-200 transition-colors overflow-hidden whitespace-nowrap truncate max-w-[100px] inline-block"
                   >
                     {crumb.name}
                   </button>
@@ -459,7 +459,7 @@ export const FolderView = () => {
               {currentFolder && (
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-4 h-4 text-gray-500" />
-                  <span className="text-white font-medium">{currentFolder.name}</span>
+                  <span className="text-xs sm:text-sm text-white font-medium overflow-hidden whitespace-nowrap truncate max-w-[100px] inline-block">{currentFolder.name}</span>
                 </div>
               )}
             </nav>
@@ -495,13 +495,15 @@ export const FolderView = () => {
               {isSelectionMode ? <CheckSquare size={16} /> : <Square size={16} />}
               {isSelectionMode ? 'Exit Select' : 'Select'}
             </button>
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="text-gray-300 hover:text-white transition-colors bg-gray-800/20 backdrop-blur-sm py-2 px-4 rounded-lg font-semibold flex items-center gap-2 text-sm border border-gray-600/20 hover:bg-gray-700/30"
-            >
-              <UploadIcon size={16} />
-              Upload Files
-            </button>
+            {canUpload && (
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="text-gray-300 hover:text-white transition-colors bg-gray-800/20 backdrop-blur-sm py-2 px-4 rounded-lg font-semibold flex items-center gap-2 text-sm border border-gray-600/20 hover:bg-gray-700/30"
+              >
+                <UploadIcon size={16} />
+                Upload Files
+              </button>
+            )}
           </div>
         </div>
 
@@ -566,7 +568,7 @@ export const FolderView = () => {
                   : 'This folder is empty. Create a subfolder or upload some files to get started.'
                 }
               </p>
-              {!searchQuery && (
+              {!searchQuery && canCreateFolder && (
                 <div className="flex items-center justify-center gap-4">
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
@@ -575,18 +577,20 @@ export const FolderView = () => {
                     <Plus size={20} />
                     Create Folder
                   </button>
-                  <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="text-gray-300 hover:text-white transition-colors bg-gray-800/30 backdrop-blur-sm py-3 px-6 rounded-lg font-semibold flex items-center gap-2 border border-gray-600/20 hover:bg-gray-700/40"
-                  >
-                    <UploadIcon size={20} />
-                    Upload Files
-                  </button>
+                  {canUpload && (
+                    <button
+                      onClick={() => setIsUploadModalOpen(true)}
+                      className="text-gray-300 hover:text-white transition-colors bg-gray-800/30 backdrop-blur-sm py-3 px-6 rounded-lg font-semibold flex items-center gap-2 border border-gray-600/20 hover:bg-gray-700/40"
+                    >
+                      <UploadIcon size={20} />
+                      Upload Files
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-8 overflow-x-hidden">
               {/* Subfolders */}
               {filteredSubfolders.length > 0 && (
                 <div>
@@ -594,7 +598,7 @@ export const FolderView = () => {
                     <span>Folders</span>
                     <span className="text-sm text-gray-400">({filteredSubfolders.length})</span>
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+                  <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-8">
                     {filteredSubfolders.map((folder) => (
                       <div key={folder._id} className="relative">
                         {isSelectionMode && (
@@ -639,7 +643,7 @@ export const FolderView = () => {
                     <span>Files</span>
                     <span className="text-sm text-gray-400">({filteredFiles.length})</span>
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+                  <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-8">
                     {filteredFiles.map((file) => (
                       <div key={file._id} className="relative">
                         {isSelectionMode && (
@@ -687,8 +691,7 @@ export const FolderView = () => {
           onSuccess={handleCreateFolderSuccess}
           parentFolderId={folderId}
         />
-
-        {folderId && isUploadModalOpen && (
+        {folderId && isUploadModalOpen && canUpload && (
           <div className="fixed inset-0 surface-dark/80 backdrop-blur-sm flex items-center justify-center z-50">
             <FileUpload
               folderId={folderId}
@@ -723,4 +726,4 @@ export const FolderView = () => {
       </div>
     </div>
   );
-}; 
+};

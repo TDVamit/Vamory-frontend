@@ -92,14 +92,14 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl shadow-2xl max-w-lg w-full border border-gray-600/20">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+      <div className="glass bg-black/40 rounded-xl shadow-2xl max-w-lg w-full border border-gray-700/40">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700/30">
           <h2 className="text-xl font-light text-white">Convert Storage Type</h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-700/30"
+            className="p-2 text-gray-400 hover:text-gray-200 transition-colors rounded-lg hover:bg-red-500/10"
           >
             <X className="w-5 h-5" />
           </button>
@@ -238,4 +238,4 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
       </div>
     </div>
   );
-}; 
+};

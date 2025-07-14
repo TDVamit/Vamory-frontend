@@ -11,8 +11,7 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<AuthForm mode="login" />} />
-          <Route path="/register" element={<AuthForm mode="register" />} />
+          <Route path="/login" element={<AuthForm />} />
           <Route
             path="/"
             element={

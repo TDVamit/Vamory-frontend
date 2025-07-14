@@ -92,15 +92,15 @@ export const ConfirmDialog = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40"
         onClick={handleBackdropClick}
       />
-      
       {/* Dialog */}
       <div
+        className="relative z-10 glass bg-black/50 rounded-xl shadow-2xl max-w-md w-full border border-gray-700/40 p-8 flex flex-col items-center"
         ref={dialogRef}
-        className="relative bg-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         {/* Close button */}
         <button
@@ -145,4 +145,4 @@ export const ConfirmDialog = ({
     </div>,
     document.body
   );
-}; 
+};

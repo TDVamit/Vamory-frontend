@@ -1,23 +1,18 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
-interface AuthFormProps {
-  mode: 'login' | 'register';
-}
-
-export const AuthForm = ({ mode }: AuthFormProps) => {
+export const AuthForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     email: '',
-    full_name: '',
     password: '',
   });
 
@@ -29,14 +24,10 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      if (mode === 'login') {
-        await login(formData.email, formData.password);
-      } else {
-        await register(formData.email, formData.full_name, formData.password);
-      }
+      await login(formData.email, formData.password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : `${mode} failed`);
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setIsLoading(false);
     }
@@ -54,13 +45,10 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-8 w-full max-w-md shadow-2xl border border-gray-600/20">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-300 mb-2">
-            {mode === 'login' ? 'Welcome Back' : 'Join Vamory'}
+            Welcome Back
           </h1>
           <p className="text-gray-400">
-            {mode === 'login' 
-              ? 'Sign in to access your cloud storage' 
-              : 'Create your account to get started'
-            }
+            Sign in to your account
           </p>
         </div>
 
@@ -89,27 +77,6 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
               />
             </div>
           </div>
-
-          {mode === 'register' && (
-            <div>
-              <label htmlFor="full_name" className="block text-sm font-medium text-gray-300 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  id="full_name"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-3 surface-alt border border-gray-600/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 transition-all"
-                  placeholder="Enter your full name"
-                />
-              </div>
-            </div>
-          )}
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
@@ -145,23 +112,11 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-gray-500/30 border-t-gray-400 rounded-full animate-spin" />
             ) : (
-              mode === 'login' ? 'Sign In' : 'Create Account'
+              'Sign In'
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-gray-400 text-sm">
-            {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <Link
-              to={mode === 'login' ? '/register' : '/login'}
-              className="text-gray-300 hover:text-gray-100 transition-colors font-medium"
-            >
-              {mode === 'login' ? 'Sign up here' : 'Sign in here'}
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
-}; 
+};

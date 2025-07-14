@@ -63,11 +63,11 @@ export const EditFolderModal = ({ isOpen, onClose, onSuccess, folder }: EditFold
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 surface-dark/80 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="glass rounded-xl p-8 w-full max-w-md mx-4 glow-border">
+    <div className="fixed inset-0 min-h-screen bg-black/30 flex items-center justify-center z-50 overflow-y-auto animate-in">
+      <div className="glass bg-black/40 rounded-xl p-8 w-full max-w-md mx-4 border border-gray-700/40 animate-slide-up">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-700/30 backdrop-blur-sm rounded-lg border border-gray-600/20">
+            <div className="p-2 bg-black/30 rounded-lg border border-gray-700/30">
               <Edit3 className="w-5 h-5 text-gray-400" />
             </div>
             <div>
@@ -85,7 +85,7 @@ export const EditFolderModal = ({ isOpen, onClose, onSuccess, folder }: EditFold
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-900/30 backdrop-blur-sm border border-red-700/40 rounded-lg p-3">
+            <div className="bg-red-900/30 border border-red-700/40 rounded-lg p-3">
               <p className="text-red-300 text-sm">{error}</p>
             </div>
           )}
@@ -136,4 +136,4 @@ export const EditFolderModal = ({ isOpen, onClose, onSuccess, folder }: EditFold
       </div>
     </div>
   );
-}; 
+};
