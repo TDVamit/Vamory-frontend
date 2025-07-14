@@ -495,15 +495,6 @@ export const FolderView = () => {
               {isSelectionMode ? <CheckSquare size={16} /> : <Square size={16} />}
               {isSelectionMode ? 'Exit Select' : 'Select'}
             </button>
-            {canUpload && (
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="text-gray-300 hover:text-white transition-colors bg-gray-800/20 backdrop-blur-sm py-2 px-4 rounded-lg font-semibold flex items-center gap-2 text-sm border border-gray-600/20 hover:bg-gray-700/30"
-              >
-                <UploadIcon size={16} />
-                Upload Files
-              </button>
-            )}
           </div>
         </div>
 
@@ -528,19 +519,30 @@ export const FolderView = () => {
           </div>
         )}
 
-        {/* Search */}
-        <div className="relative mb-6 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search folders and files..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              handleSearch(e.target.value);
-            }}
-            className="pl-10 pr-4 py-2 surface-alt rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 w-full transition-all"
-          />
+        {/* Search and Upload Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6 w-full max-w-2xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search folders and files..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                handleSearch(e.target.value);
+              }}
+              className="pl-10 pr-4 py-2 surface-alt rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 w-full transition-all"
+            />
+          </div>
+          {canUpload && (
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="mt-3 sm:mt-0 sm:ml-0 text-gray-300 hover:text-white transition-colors bg-gray-800/20 backdrop-blur-sm py-2 px-4 rounded-lg font-semibold flex items-center gap-2 text-sm border border-gray-600/20 hover:bg-gray-700/30 w-full sm:w-auto justify-center"
+            >
+              <UploadIcon size={16} />
+              Upload Files
+            </button>
+          )}
         </div>
 
         {error && (
@@ -640,6 +642,15 @@ export const FolderView = () => {
               {filteredFiles.length > 0 && (
                 <div>
                   <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    {isSelectionMode && (
+                      <button
+                        onClick={selectAll}
+                        className="p-1 rounded border-2 transition-colors mr-2 bg-gray-800/80 border-gray-600 text-gray-300 hover:border-gray-400 flex items-center justify-center"
+                        title="Select All Files"
+                      >
+                        <Square size={18} />
+                      </button>
+                    )}
                     <span>Files</span>
                     <span className="text-sm text-gray-400">({filteredFiles.length})</span>
                   </h2>
