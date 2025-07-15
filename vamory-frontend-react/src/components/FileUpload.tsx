@@ -138,6 +138,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
   const [selectedFiles, setSelectedFiles] = useState<UploadingFile[]>([]);
   const [error, setError] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const [info, setInfo] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllersRef = useRef<Set<AbortController>>(new Set());
 
@@ -209,7 +210,12 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
 
   // Upload handler
   const handleUpload = async () => {
+    if (!folderId) {
+      setError('No folder selected. Please refresh and try again.');
+      return;
+    }
     setError('');
+    setInfo('');
     setIsUploading(true);
     const token = localStorage.getItem('access_token') || '';
     const updatedFiles = [...selectedFiles];
@@ -221,20 +227,34 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
         const file = updatedFiles[i].file;
         const file_hash = await calculateFileHash(file);
         const presign = await getPresignedUploadUrl(folderId, file.name, file.type, token, file_hash);
-        const controller = new AbortController();
-        abortControllersRef.current.add(controller);
-        await uploadToS3WithProgress(
-          presign.url,
-          file,
-          (progress) => {
-            updatedFiles[i].progress = progress;
-            setSelectedFiles([...updatedFiles]);
-          },
-          controller.signal,
-          presign.storage_class
-        );
-        abortControllersRef.current.delete(controller);
-        await completeUpload({
+        if (!presign.url && !presign.already_uploaded) {
+          updatedFiles[i].status = 'error';
+          updatedFiles[i].error = 'Failed to get upload URL from server.';
+          setSelectedFiles([...updatedFiles]);
+          setError('Failed to get upload URL from server.');
+          continue;
+        }
+        let skipS3 = false;
+        if (presign.already_uploaded) {
+          setInfo(`File "${file.name}" was already uploaded.`);
+          skipS3 = true;
+        }
+        if (!skipS3) {
+          const controller = new AbortController();
+          abortControllersRef.current.add(controller);
+          await uploadToS3WithProgress(
+            presign.url,
+            file,
+            (progress) => {
+              updatedFiles[i].progress = progress;
+              setSelectedFiles([...updatedFiles]);
+            },
+            controller.signal,
+            presign.storage_class
+          );
+          abortControllersRef.current.delete(controller);
+        }
+        const completeResp = await completeUpload({
           s3_key: presign.s3_key,
           filename: file.name,
           folder_id: folderId,
@@ -242,6 +262,9 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
           file_size: file.size,
           file_hash,
         }, token);
+        if (completeResp?.already_uploaded) {
+          setInfo(`File "${file.name}" was already uploaded.`);
+        }
         updatedFiles[i].status = 'completed';
         updatedFiles[i].progress = 100;
         setSelectedFiles([...updatedFiles]);
@@ -259,6 +282,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
         onSuccess();
         setSelectedFiles([]);
         setError('');
+        setInfo('');
         onClose();
       }, 800);
     }
@@ -277,6 +301,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
             <h3 className="text-lg font-semibold text-white">Upload Files</h3>
           </div>
           <button
+            type="button"
             onClick={() => {
               // Abort all ongoing uploads
               abortControllersRef.current.forEach(controller => controller.abort());
@@ -294,6 +319,11 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
         {error && (
           <div className="mb-4 bg-red-900/30 backdrop-blur-sm border border-red-700/40 rounded-lg p-3">
             <p className="text-red-300 text-sm">{error}</p>
+          </div>
+        )}
+        {info && (
+          <div className="mb-4 bg-blue-900/30 backdrop-blur-sm border border-blue-700/40 rounded-lg p-3">
+            <p className="text-blue-300 text-sm">{info}</p>
           </div>
         )}
 
@@ -318,6 +348,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
                 <p className="text-gray-400 text-sm mt-1">Multiple files supported</p>
               </div>
               <button
+                type="button"
                 onClick={handleSelectAll}
                 className="text-gray-300 hover:text-white transition-colors text-sm underline"
               >
@@ -345,6 +376,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
                         <div className="w-4 h-4 border-2 border-gray-500/30 border-t-gray-400 rounded-full animate-spin" />
                       )}
                       <button
+                        type="button"
                         onClick={e => {
                           e.stopPropagation();
                           removeFile(index);
@@ -371,6 +403,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
 
         <div className="flex gap-3 mt-6">
           <button
+            type="button"
             onClick={() => {
               // Abort all ongoing uploads
               abortControllersRef.current.forEach(controller => controller.abort());
@@ -384,6 +417,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
             className="px-4 py-3 text-gray-300 hover:text-white transition-colors bg-gray-700/50 backdrop-blur-sm rounded-lg font-semibold flex items-center justify-center gap-2 border border-gray-600/20 hover:bg-gray-600/50"
           >
@@ -391,6 +425,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
             Add More
           </button>
           <button
+            type="button"
             onClick={handleUpload}
             disabled={selectedFiles.length === 0 || isUploading}
             className="flex-1 text-gray-300 hover:text-white transition-colors bg-gray-800/30 backdrop-blur-sm py-3 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600/20 hover:bg-gray-700/40"

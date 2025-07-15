@@ -12,6 +12,7 @@ import { MediaGallery } from './MediaGallery';
 import { useAuth } from '../hooks/useAuth';
 import { UserRole } from '../types';
 import type { Folder, FileData } from '../types';
+import { ActionDropdown } from './ActionDropdown';
 
 export const FolderView = () => {
   const { folderId } = useParams<{ folderId: string }>();
@@ -48,7 +49,7 @@ export const FolderView = () => {
 
   const { user } = useAuth();
   const userRole = user?.user_role;
-  const canCreateFolder = userRole === UserRole.admin || userRole === UserRole.user;
+  const canCreateFolder = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user;
   const canUpload = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user || userRole === UserRole.editor;
 
   useEffect(() => {
@@ -261,13 +262,19 @@ export const FolderView = () => {
   const handleBackNavigation = () => {
     if (currentFolder?.parent_folder_id) {
       navigate(`/folder/${currentFolder.parent_folder_id}`);
-    } else {
+    } else if (currentFolder && !currentFolder.parent_folder_id) {
       navigate('/');
+    } else {
+      console.error('Tried to navigate to undefined parent_folder_id');
     }
   };
 
   const handleFolderNavigation = (targetFolderId: string) => {
-    navigate(`/folder/${targetFolderId}`);
+    if (targetFolderId) {
+      navigate(`/folder/${targetFolderId}`);
+    } else {
+      console.error('Tried to navigate to undefined targetFolderId');
+    }
   };
 
   // Multi-select handlers
@@ -495,6 +502,21 @@ export const FolderView = () => {
               {isSelectionMode ? <CheckSquare size={16} /> : <Square size={16} />}
               {isSelectionMode ? 'Exit Select' : 'Select'}
             </button>
+            <ActionDropdown
+              options={[
+                {
+                  label: 'Create Folder',
+                  onClick: () => setIsCreateModalOpen(true),
+                  icon: <Plus size={16} />,
+                },
+                {
+                  label: 'Upload Files',
+                  onClick: () => setIsUploadModalOpen(true),
+                  icon: <UploadIcon size={16} />,
+                },
+              ]}
+              className="ml-2"
+            />
           </div>
         </div>
 
@@ -519,7 +541,7 @@ export const FolderView = () => {
           </div>
         )}
 
-        {/* Search and Upload Controls */}
+        {/* Search, Create Folder, and Upload Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6 w-full max-w-2xl">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -534,15 +556,6 @@ export const FolderView = () => {
               className="pl-10 pr-4 py-2 surface-alt rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 w-full transition-all"
             />
           </div>
-          {canUpload && (
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="mt-3 sm:mt-0 sm:ml-0 text-gray-300 hover:text-white transition-colors bg-gray-800/20 backdrop-blur-sm py-2 px-4 rounded-lg font-semibold flex items-center gap-2 text-sm border border-gray-600/20 hover:bg-gray-700/30 w-full sm:w-auto justify-center"
-            >
-              <UploadIcon size={16} />
-              Upload Files
-            </button>
-          )}
         </div>
 
         {error && (

@@ -17,7 +17,9 @@ import type {
   FileData,
   UploadFileResponse,
   UpdateFileRequest,
-  PaginatedResponse
+  PaginatedResponse,
+  AddFromGDriveRequest,
+  AddFromGDriveResponse
 } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000';
@@ -398,6 +400,11 @@ export const filesAPI = {
 
   downloadFile: async (fileId: string): Promise<string> => {
     const response = await api.get(`/api/v1/files/${fileId}/download`);
+    return response.data;
+  },
+
+  addFromGDrive: async (data: AddFromGDriveRequest): Promise<AddFromGDriveResponse> => {
+    const response = await api.post('/api/v1/files/add-from-gdrive', data);
     return response.data;
   },
 

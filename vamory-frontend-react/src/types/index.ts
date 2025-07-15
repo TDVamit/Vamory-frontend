@@ -73,7 +73,7 @@ export interface Folder {
   access_level?: string;
   shared_with?: any[];
   thumbnail_url?: string;
-  status: 'active' | 'inactive' | 'converting';
+  status: 'active' | 'inactive' | 'converting' | 'copying';
   conversion_estimated_completion?: string;
   retrieval_days?: number;
   shared_by_name?: string;
@@ -186,4 +186,17 @@ export interface UserSearchRequest {
   per_page?: number;
   sort_by?: 'full_name' | 'email' | 'created_at';
   sort_order?: 'asc' | 'desc';
+}
+
+export interface AddFromGDriveRequest {
+  gdrive_url: string;
+  folder_name: string;
+  folder_storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+}
+
+export interface AddFromGDriveResponse {
+  success: boolean;
+  message: string;
+  folder_id?: string;
+  status?: 'copying';
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Download, 
   Trash2, 
-  MoreHorizontal,
+  MoreVertical,
   Eye,
   Volume2, VolumeX, RotateCcw, RotateCw, Pause, Play, Maximize2, Minimize2, Zap
 } from 'lucide-react';
@@ -337,77 +337,57 @@ export const FileCard = ({ file, onRefresh }: FileCardProps) => {
         )}
 
         {/* Actions Menu */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuRef}>
+        <div className={`absolute top-2 right-2 ${showPreview ? '' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`} ref={menuRef}>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowActions(!showActions);
             }}
-            className="p-1.5 bg-black/60 text-white hover:text-gray-300 transition-colors rounded-lg backdrop-blur-sm"
+            className="text-gray-300 flex items-center justify-center focus:outline-none"
           >
-            <MoreHorizontal className="w-4 h-4" />
+            <MoreVertical className="w-5 h-5" />
           </button>
-          
-          {showActions && (
-            <div className="absolute right-0 top-8 glass rounded-lg shadow-lg border border-gray-700/30 z-20 py-1 min-w-[140px] backdrop-blur-md bg-black/40">
-              {file.file_type === 'image' && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowPreview(true);
-                    setShowActions(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  View Image
-                </button>
-              )}
+        </div>
+
+        {showActions && (
+          <div className="absolute right-0 top-8 glass rounded-lg shadow-lg border border-gray-700/30 z-20 py-1 min-w-[140px] backdrop-blur-md bg-black/40">
+            {file.file_type === 'image' && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDownload();
+                  setShowPreview(true);
                   setShowActions(false);
                 }}
                 className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
               >
-                <Download className="w-4 h-4" />
-                Download
+                <Eye className="w-4 h-4" />
+                View Image
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteClick(e);
-                }}
-                disabled={isDeleting}
-                className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Metadata Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-4">
-          <div className="text-white">
-            <div className="flex items-center justify-between text-[10px] sm:text-xs text-gray-300">
-              {file.file_type !== 'image' && file.file_type !== 'video' && (
-                <span className={`px-2 py-1 rounded text-xs font-medium ${getFileTypeColor(file.file_type)}`}>
-                  {file.file_type.toUpperCase()}
-                </span>
-              )}
-              <div className={`text-right ${file.file_type === 'image' || file.file_type === 'video' ? 'ml-auto' : ''}`}>
-                <div className="text-sm">{formatFileSize(file.file_size)}</div>
-                <div className="text-gray-400">{formatDate(file.created_at)}</div>
-              </div>
-            </div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload();
+                setShowActions(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Download
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(e);
+              }}
+              disabled={isDeleting}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
-        </div>
-
-        {/* Hover effect */}
-        <div className="absolute inset-0 bg-gray-600/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        )}
       </div>
 
 

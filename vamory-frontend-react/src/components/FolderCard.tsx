@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Folder, MoreHorizontal, Trash2, Edit3, RefreshCw, Share2, FileText, Folder as FolderIcon, Database, Users, Info } from 'lucide-react';
+import { Folder, MoreVertical, Trash2, Edit3, RefreshCw, Share2, FileText, Folder as FolderIcon, Database, Users, Info } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EditFolderModal } from './EditFolderModal';
@@ -26,11 +26,15 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
+  const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number}>({top: 0, left: 0});
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { deleteFolder, isLoading: isDeleting, error } = useFolderManager();
 
   // Calculate effective status based on conversion completion and retrieval days
   const getEffectiveStatus = () => {
+    if (folder.status === 'copying') return 'copying';
     if (folder.status === 'converting') return 'converting';
     if (folder.status === 'inactive') return 'inactive';
     
@@ -50,7 +54,7 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
 
   const effectiveStatus = getEffectiveStatus();
   const isClickable = effectiveStatus === 'active';
-  const canShowActions = effectiveStatus !== 'converting'; // Converting folders can't have edit/storage actions
+  const canShowActions = effectiveStatus !== 'converting' && effectiveStatus !== 'copying'; // No actions for converting/copying
   const canDelete = true; // All statuses can be deleted
   const canShare = !folder.shared_by_name; // Cannot share folders that are shared by others
   const isSharedByOthers = !!folder.shared_by_name; // Folder is shared by someone else
@@ -66,7 +70,13 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
   // Handle click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const menuNode = menuRef.current;
+      const buttonNode = menuButtonRef.current;
+      // If click is outside both the menu and the button, close the dropdown
+      if (
+        menuNode && !menuNode.contains(event.target as Node) &&
+        buttonNode && !buttonNode.contains(event.target as Node)
+      ) {
         setShowActions(false);
       }
     };
@@ -191,18 +201,6 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
     }
   };
 
-  const updateButtonPosition = () => {
-    if (menuRef.current) {
-      const rect = menuRef.current.getBoundingClientRect();
-      setButtonPosition({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height
-      });
-    }
-  };
-
   // Default folder thumbnail
   const getDefaultThumbnail = () => {
     return (
@@ -215,6 +213,29 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         </div>
       </div>
     );
+  };
+
+  // When opening the menu, check if there's enough space below, otherwise open upwards, and set absolute position
+  const handleMenuButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect();
+      const dropdownHeight = 200; // Approximate, or count options * option height
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      let direction: 'down' | 'up' = 'down';
+      let top = rect.bottom + 8;
+      if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+        direction = 'up';
+        top = rect.top - dropdownHeight - 8;
+      }
+      setDropdownDirection(direction);
+      setDropdownPosition({
+        top,
+        left: rect.left + rect.width - 140 // 140px = min width of menu
+      });
+    }
+    setShowActions((prev) => !prev);
   };
 
   return (
@@ -258,28 +279,22 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
 
         {/* Actions Menu - Only show for active folders */}
         {canShowActions && (
-          <div
-            className={"absolute top-2 right-2 z-30"} ref={menuRef}
-            style={{ overflow: 'visible' }}
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                updateButtonPosition();
-                setShowActions((prev) => !prev);
-              }}
-              className="p-1.5 bg-black/60 text-white hover:text-gray-300 transition-colors rounded-lg backdrop-blur-sm"
-              disabled={isDeleting}
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
+          <div className={"absolute top-2 right-2 z-30"} ref={menuRef} style={{ overflow: 'visible' }}>
+            <div className="bg-black/60 rounded-lg p-1.5 flex items-center justify-center">
+              <button
+                ref={menuButtonRef}
+                onClick={handleMenuButtonClick}
+                className="text-gray-300 flex items-center justify-center focus:outline-none"
+                disabled={isDeleting}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </div>
             {showActions && createPortal(
               <div 
+                ref={menuRef}
                 className="fixed bg-gray-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
-                style={{
-                  top: buttonPosition.top + buttonPosition.height + 8,
-                  left: buttonPosition.left + buttonPosition.width - 140,
-                }}
+                style={{overflow: 'visible', top: dropdownPosition.top, left: dropdownPosition.left, minWidth: 140}}
               >
                 <button
                   onClick={(e) => {
@@ -348,7 +363,7 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         {effectiveStatus !== 'active' && (
           <div className="absolute top-2 left-2 backdrop-blur-sm border border-black bg-black/80 rounded-lg px-2 py-1 flex items-center justify-center">
             <span className="text-xs font-medium text-white">
-              {effectiveStatus === 'converting' ? 'Converting' : 'Inactive'}
+              {effectiveStatus === 'converting' ? 'Converting' : effectiveStatus === 'copying' ? 'Copying' : effectiveStatus === 'inactive' ? 'Inactive' : ''}
             </span>
           </div>
         )}

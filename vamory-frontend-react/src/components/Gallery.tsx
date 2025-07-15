@@ -6,7 +6,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useFolders } from '../hooks/useFolders';
 import { FolderCard } from './FolderCard';
 import { CreateFolderModal } from './CreateFolderModal';
+import { AddFromGDriveModal } from './CreateFolderModal';
 import { Header } from './Header';
+import { UserRole } from '../types';
+import React from 'react';
+import { ActionDropdown } from './ActionDropdown';
 
 export const Gallery = () => {
   const navigate = useNavigate();
@@ -14,6 +18,7 @@ export const Gallery = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAddFromGDriveOpen, setIsAddFromGDriveOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isPausedByUser, setIsPausedByUser] = useState(false);
@@ -60,7 +65,7 @@ export const Gallery = () => {
     if (isAutoPlaying && !isPausedByUser && carouselFolders.length > 1) {
       autoPlayRef.current = window.setInterval(() => {
         setCurrentSlide(prev => (prev + 1) % carouselFolders.length);
-      }, 4000); // Change slide every 4 seconds
+      }, 2000); // Change slide every 2 seconds (was 4 seconds)
     }
 
     return () => {
@@ -122,8 +127,16 @@ export const Gallery = () => {
     refresh(); // Refresh the folder list
   };
 
+  const handleAddFromGDriveSuccess = () => {
+    refresh();
+  };
+
   const handleFolderClick = (folderId: string) => {
-    navigate(`/folder/${folderId}`);
+    if (folderId) {
+      navigate(`/folder/${folderId}`);
+    } else {
+      console.error('Tried to navigate to undefined folderId');
+    }
   };
 
   const handleSearchChange = (value: string) => {
@@ -136,6 +149,12 @@ export const Gallery = () => {
     // Remove from main folders list without refetching
     removeFolder(deletedFolderId);
   };
+
+  const canCreateFolder = user && (
+    user.user_role === UserRole.super_admin ||
+    user.user_role === UserRole.admin ||
+    user.user_role === UserRole.user
+  );
 
   return (
     <div className="min-h-screen surface-dark overflow-x-hidden">
@@ -279,7 +298,7 @@ export const Gallery = () => {
                 : 'Create your first folder to get started'
               }
             </p>
-            {!searchQuery && (
+            {!searchQuery && canCreateFolder && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="text-gray-300 hover:text-white transition-colors flex items-center gap-2 mx-auto text-lg font-medium bg-gray-800/30 backdrop-blur-sm px-6 py-3 rounded-xl border border-gray-600/20 hover:bg-gray-700/40"
@@ -290,13 +309,29 @@ export const Gallery = () => {
             )}
           </div>
         ) : (
-          <>
+          <React.Fragment>
             {/* All Folders Grid */}
             {folders.length > 0 && (
               <div className="mb-12">
-                <h3 className="text-lg font-light text-white mb-6">
-                  {searchQuery ? `Search Results (${folders.length})` : 'All Folders'}
-                </h3>
+                <div className="flex flex-row items-center justify-between mb-6 gap-4">
+                  <h3 className="text-lg font-light text-white mb-0">
+                    {searchQuery ? `Search Results (${folders.length})` : 'All Folders'}
+                  </h3>
+                  <ActionDropdown
+                    options={[
+                      {
+                        label: 'Create Folder',
+                        onClick: () => setIsCreateModalOpen(true),
+                        icon: <Plus size={16} />,
+                      },
+                      {
+                        label: 'Add from Google Drive',
+                        onClick: () => setIsAddFromGDriveOpen(true),
+                        icon: <Plus size={16} />,
+                      },
+                    ]}
+                  />
+                </div>
                 <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-6">
                   {folders.map((folder, index) => (
                     <div
@@ -325,7 +360,7 @@ export const Gallery = () => {
                 </div>
               </div>
             )}
-          </>
+          </React.Fragment>
         )}
 
         {/* Load more trigger (hidden, used for intersection observer) */}
@@ -337,6 +372,11 @@ export const Gallery = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleCreateFolderSuccess}
+      />
+      <AddFromGDriveModal
+        isOpen={isAddFromGDriveOpen}
+        onClose={() => setIsAddFromGDriveOpen(false)}
+        onSuccess={handleAddFromGDriveSuccess}
       />
     </div>
   );

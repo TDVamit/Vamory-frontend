@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2, Download } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2, Download, MoreVertical, Eye, Download as DownloadIcon, Trash2 } from 'lucide-react';
 import type { FileData } from '../types';
+import { useFileManager } from '../hooks/useFileManager';
 
 interface MediaGalleryProps {
   files: FileData[];
@@ -21,6 +22,9 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate }: Media
   const [is2xActive, setIs2xActive] = useState(false);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchStartY, setTouchStartY] = useState(0);
+  const [showOptions, setShowOptions] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { downloadFile, deleteFile } = useFileManager();
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pressTimerRef = useRef<number | null>(null);
@@ -245,6 +249,21 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate }: Media
     }
   };
 
+  const handleDelete = async () => {
+    setShowOptions(false);
+    setIsDeleting(true);
+    try {
+      const success = await deleteFile(currentFile._id);
+      if (success) {
+        onClose();
+      }
+    } catch (error) {
+      // Optionally show error
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatTime = (t: number) => {
     if (isNaN(t)) return '0:00';
     const m = Math.floor(t / 60);
@@ -304,6 +323,44 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate }: Media
       >
         <X className="w-6 h-6" />
       </button>
+
+      {/* Options icon */}
+      <div className="absolute top-4 right-16 z-10">
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowOptions((prev) => !prev); }}
+          className="text-gray-300 flex items-center justify-center focus:outline-none"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+        {showOptions && (
+          <div className="absolute right-0 mt-2 w-44 rounded-lg shadow-lg bg-black/40 border border-gray-700/40 z-50 py-1 backdrop-blur-md">
+            {isImage && (
+              <button
+                onClick={() => { setShowOptions(false); }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-white flex items-center gap-2 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                View
+              </button>
+            )}
+            <button
+              onClick={() => { setShowOptions(false); handleDownload(); }}
+              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-white flex items-center gap-2 transition-colors"
+            >
+              <DownloadIcon className="w-4 h-4" />
+              Download
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Navigation arrows */}
       {files.length > 1 && (
