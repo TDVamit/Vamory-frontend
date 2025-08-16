@@ -524,28 +524,28 @@ export const PublicFolderView = () => {
             {/* No delete or bulk delete button in public view */}
           </div>
         )}
-        {/* Search */}
+                         {/* Search */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6 w-full max-w-2xl">
-          <div className="relative flex-1 flex items-center">
-            <Search className="absolute left-3 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search folders and files..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                handleSearch(e.target.value);
-              }}
-              onKeyPress={handleSearchKeyPress}
-              className="flex-1 pl-10 pr-20 sm:pr-4 py-2 surface-alt rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 transition-all rounded-r-none"
-            />
-            <div className="absolute right-0 flex items-center h-full">
-              <AISearchToggle
-                isEnabled={isAISearchEnabled}
-                onToggle={setIsAISearchEnabled}
-                className="rounded-l-none py-2"
+          <div className="flex items-center gap-3 flex-1">
+            <div className="relative flex items-center overflow-hidden rounded-lg flex-1">
+              <Search className="absolute left-3 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search folders and files..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                onKeyPress={handleSearchKeyPress}
+                className="flex-1 pl-10 pr-4 py-2 surface-alt text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-0 transition-all"
               />
             </div>
+            <AISearchToggle
+              isEnabled={isAISearchEnabled}
+              onToggle={setIsAISearchEnabled}
+              className="rounded"
+            />
           </div>
         </div>
         {error && (

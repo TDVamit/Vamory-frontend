@@ -358,25 +358,25 @@ export const Gallery = () => {
             }}
           >
             <div className="w-full p-6">
-              {/* Search Bar with Glass Effect */}
+                                           {/* Search Bar with Glass Effect */}
               <div className="max-w-2xl mx-auto px-4 sm:px-0">
-                <div className="relative backdrop-blur-md bg-white/10 rounded-xl border border-gray-600/30 flex items-center min-h-[56px]">
-                  <Search className="absolute left-4 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder="Search folders..."
-                    value={searchQuery}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onKeyPress={handleSearchKeyPress}
-                    className="flex-1 pl-12 pr-20 sm:pr-4 py-4 bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 rounded-l-xl text-lg"
-                  />
-                  <div className="absolute right-2 flex items-center h-full">
-                    <AISearchToggle
-                      isEnabled={isAISearchEnabled}
-                      onToggle={setIsAISearchEnabled}
-                      className="rounded-l-none rounded-r-xl"
+                <div className="flex items-center gap-3">
+                  <div className="relative backdrop-blur-md bg-white/10 rounded-xl border border-gray-600/30 flex items-center min-h-[56px] overflow-hidden flex-1">
+                    <Search className="absolute left-4 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Search folders..."
+                      value={searchQuery}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      onKeyPress={handleSearchKeyPress}
+                      className="flex-1 pl-12 pr-4 py-4 bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-0 text-lg"
                     />
                   </div>
+                  <AISearchToggle
+                    isEnabled={isAISearchEnabled}
+                    onToggle={setIsAISearchEnabled}
+                    className="rounded"
+                  />
                 </div>
               </div>
               {/* Slide Indicators */}
