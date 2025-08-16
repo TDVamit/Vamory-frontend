@@ -359,7 +359,7 @@ export const Gallery = () => {
           >
             <div className="w-full p-6">
               {/* Search Bar with Glass Effect */}
-              <div className="max-w-2xl mx-auto">
+              <div className="max-w-2xl mx-auto px-4 sm:px-0">
                 <div className="relative backdrop-blur-md bg-white/10 rounded-xl border border-gray-600/30 flex items-center min-h-[56px]">
                   <Search className="absolute left-4 text-gray-400 w-5 h-5" />
                   <input
@@ -368,9 +368,9 @@ export const Gallery = () => {
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onKeyPress={handleSearchKeyPress}
-                    className="flex-1 pl-12 pr-4 py-4 bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 rounded-l-xl text-lg"
+                    className="flex-1 pl-12 pr-20 sm:pr-4 py-4 bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 rounded-l-xl text-lg"
                   />
-                  <div className="pr-2 flex items-center h-full">
+                  <div className="absolute right-2 flex items-center h-full">
                     <AISearchToggle
                       isEnabled={isAISearchEnabled}
                       onToggle={setIsAISearchEnabled}

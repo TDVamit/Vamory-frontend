@@ -537,13 +537,15 @@ export const PublicFolderView = () => {
                 handleSearch(e.target.value);
               }}
               onKeyPress={handleSearchKeyPress}
-              className="flex-1 pl-10 pr-4 py-2 surface-alt rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 transition-all rounded-r-none"
+              className="flex-1 pl-10 pr-20 sm:pr-4 py-2 surface-alt rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 transition-all rounded-r-none"
             />
-            <AISearchToggle
-              isEnabled={isAISearchEnabled}
-              onToggle={setIsAISearchEnabled}
-              className="rounded-l-none py-2"
-            />
+            <div className="absolute right-0 flex items-center h-full">
+              <AISearchToggle
+                isEnabled={isAISearchEnabled}
+                onToggle={setIsAISearchEnabled}
+                className="rounded-l-none py-2"
+              />
+            </div>
           </div>
         </div>
         {error && (
