@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown, Home, DollarSign } from 'lucide-react';
+import { User, LogOut, ChevronDown, DollarSign } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileModal } from './ProfileModal';
 import { Link, useLocation } from 'react-router-dom';
 
 export const Header = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -42,23 +42,24 @@ export const Header = () => {
         <div className="flex items-center justify-between h-14 min-w-0">
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center gap-6">
-            <Link to="/gallery" className="flex items-center">
+            <Link to="/home" className="flex items-center">
               <img src="/VD Logo Funky.png" alt="Vamory Logo" className="w-10 h-10 object-contain" />
             </Link>
             
             {/* Navigation Links */}
             <nav className="hidden md:flex items-center gap-4">
-              <Link
-                to="/home"
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                  location.pathname === '/home'
-                    ? 'bg-white/10 text-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Home className="w-4 h-4" />
-                <span className="text-sm font-medium">Home</span>
-              </Link>
+              {isAuthenticated && (
+                <Link
+                  to="/gallery"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    location.pathname === '/gallery'
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-sm font-medium">Gallery</span>
+                </Link>
+              )}
               <Link
                 to="/pricing"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -75,44 +76,54 @@ export const Header = () => {
 
           {/* Right side - Profile and logout */}
           <div className="flex items-center">
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 text-gray-300 bg-gray-800/20 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-600/20 hover:bg-gray-700/30 transition-colors"
+            {isAuthenticated ? (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 text-gray-300 bg-gray-800/20 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-600/20 hover:bg-gray-700/30 transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    {user?.profile_pic ? (
+                      <img
+                        src={user.profile_pic.startsWith('data:') ? user.profile_pic : `data:image/png;base64,${user.profile_pic}`}
+                        alt="Profile"
+                        className="w-7 h-7 rounded-full object-cover border border-gray-500 bg-gray-700"
+                      />
+                    ) : (
+                      <User className="w-7 h-7 text-gray-400 rounded-full bg-gray-700 border border-gray-500" />
+                    )}
+                    <span className="text-sm font-medium text-white ml-2">{user?.full_name}</span>
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                </button>
+                {showProfileMenu && (
+                  <div className="absolute right-0 top-12 bg-black/40 glass rounded-lg shadow-lg border border-gray-700/30 py-1 min-w-[180px]">
+                    <button
+                      onClick={() => { setShowProfileModal(true); setShowProfileMenu(false); }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-black/30 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <User className="w-4 h-4" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-red-900/30 hover:text-red-400 transition-colors flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-2 text-white bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors font-medium"
               >
-                <span className="flex items-center gap-2">
-                  {user?.profile_pic ? (
-                    <img
-                      src={user.profile_pic.startsWith('data:') ? user.profile_pic : `data:image/png;base64,${user.profile_pic}`}
-                      alt="Profile"
-                      className="w-7 h-7 rounded-full object-cover border border-gray-500 bg-gray-700"
-                    />
-                  ) : (
-                    <User className="w-7 h-7 text-gray-400 rounded-full bg-gray-700 border border-gray-500" />
-                  )}
-                  <span className="text-sm font-medium text-white ml-2">{user?.full_name}</span>
-                </span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
-              </button>
-              {showProfileMenu && (
-                <div className="absolute right-0 top-12 bg-black/40 glass rounded-lg shadow-lg border border-gray-700/30 py-1 min-w-[180px]">
-                  <button
-                    onClick={() => { setShowProfileModal(true); setShowProfileMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-black/30 hover:text-white transition-colors flex items-center gap-2"
-                  >
-                    <User className="w-4 h-4" />
-                    Profile
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-red-900/30 hover:text-red-400 transition-colors flex items-center gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
+                <User className="w-4 h-4" />
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

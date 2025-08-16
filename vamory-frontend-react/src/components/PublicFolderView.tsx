@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Home, ChevronRight, File, CheckSquare, Square, Folder as FolderIcon, Plus, Upload as UploadIcon, Download, AlertTriangle, Sparkles, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Search,  File, CheckSquare, Square, Folder as FolderIcon, Plus, Download, AlertTriangle, Sparkles, RotateCcw } from 'lucide-react';
 import { publicFoldersAPI, aiSearchAPI } from '../services/api';
 import { AISearchToggle } from './AISearchToggle';
 import { FolderCard } from './FolderCard';
 import { FileCard } from './FileCard';
 import { MediaGallery } from './MediaGallery';
-import { ConfirmDialog } from './ConfirmDialog';
+
 import type { Folder as FolderType, FileData, PaginatedResponse } from '../types';
-import { ActionDropdown } from './ActionDropdown';
+
 
 // Unauthorized UI
 const UnauthorizedPage = () => (
@@ -44,13 +44,12 @@ export const PublicFolderView = () => {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [foldersPage, setFoldersPage] = useState(1);
+
+  const [_foldersPage, setFoldersPage] = useState(1);
   const [filesPage, setFilesPage] = useState(1);
-  const [hasMoreFolders, setHasMoreFolders] = useState(true);
+  const [_hasMoreFolders, setHasMoreFolders] = useState(true);
   const [hasMoreFiles, setHasMoreFiles] = useState(true);
-  const [isLoadingMoreFolders, setIsLoadingMoreFolders] = useState(false);
+
   const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
   const [isAISearchEnabled, setIsAISearchEnabled] = useState(true); // Default to enabled
   const [aiSearchResults, setAiSearchResults] = useState<{ categories: Record<string, FileData[]> } | null>(null);
@@ -260,10 +259,7 @@ export const PublicFolderView = () => {
     setSelectedFolders(allFolderIds);
     setSelectedFiles(allFileIds);
   };
-  const clearSelection = () => {
-    setSelectedFolders(new Set());
-    setSelectedFiles(new Set());
-  };
+  
   const getTotalSelected = () => selectedFolders.size + selectedFiles.size;
 
   // Search and filter

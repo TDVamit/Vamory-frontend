@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2, Download, MoreVertical, Eye, Download as DownloadIcon, Trash2, Info } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2, Download, MoreVertical, Download as DownloadIcon, Trash2, Info } from 'lucide-react';
 import type { FileData } from '../types';
 import { useFileManager } from '../hooks/useFileManager';
 
@@ -13,7 +13,7 @@ interface MediaGalleryProps {
   publicToken?: string;
 }
 
-export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileDeleted, isPublic = false, publicToken }: MediaGalleryProps) => {
+export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileDeleted, isPublic = false }: MediaGalleryProps) => {
   const [currentFileIndex, setCurrentFileIndex] = useState(currentIndex);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);

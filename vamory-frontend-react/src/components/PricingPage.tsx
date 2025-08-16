@@ -1,57 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, ArrowLeft, Archive, Clock, DollarSign, Zap, Calculator } from 'lucide-react';
+import {  ArrowLeft, Archive, Clock, DollarSign, Zap, Calculator } from 'lucide-react';
 import { Header } from './Header';
 
 const PricingPage: React.FC = () => {
-  const [isAnnual, setIsAnnual] = useState(false);
   const [standardGB, setStandardGB] = useState(0);
   const [archiveGB, setArchiveGB] = useState(0);
 
-  const regularPricing = [
-    { storage: '10 GB', price: 0.43, popular: false },
-    { storage: '20 GB', price: 0.66, popular: false },
-    { storage: '50 GB', price: 1.35, popular: false },
-    { storage: '100 GB', price: 2.50, popular: false },
-    { storage: '300 GB', price: 7.10, popular: false },
-    { storage: '500 GB', price: 11.70, popular: false },
-    { storage: '750 GB', price: 17.45, popular: false },
-    { storage: '1 TB', price: 23.75, popular: true },
-    { storage: '2 TB', price: 47.30, popular: false }
-  ];
-
-  const archivePricing = [
-    { storage: '10 GB', price: 0.0399, popular: false },
-    { storage: '20 GB', price: 0.0498, popular: false },
-    { storage: '50 GB', price: 0.0795, popular: false },
-    { storage: '100 GB', price: 0.299, popular: false },
-    { storage: '300 GB', price: 0.497, popular: false },
-    { storage: '500 GB', price: 0.695, popular: false },
-    { storage: '750 GB', price: 0.9425, popular: false },
-    { storage: '1 TB', price: 1.314, popular: true },
-    { storage: '2 TB', price: 2.428, popular: false }
-  ];
-
-  const features = [
-    "AI-powered image search",
-    "Face detection & recognition",
-    "Automatic deduplication",
-    "Google Drive migration",
-    "Public & private sharing",
-    "Real-time file access",
-    "Advanced security",
-    "24/7 customer support"
-  ];
-
-  const archiveFeatures = [
-    "Cost-effective long-term storage",
-    "2-day access request process",
-    "Additional $0.0025/GB access fee",
-    "Perfect for backup & compliance",
-    "Same security standards",
-    "Easy restoration process"
-  ];
-
+  
   // Calculate standard storage cost
   const calculateStandardCost = (gb: number) => {
     let totalCost = 0;
@@ -161,7 +117,7 @@ const PricingPage: React.FC = () => {
         <div className="relative z-10 container mx-auto px-6 py-12 mt-14">
           <div className="flex items-center justify-between mb-12">
             <Link
-              to="/"
+              to="/home"
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

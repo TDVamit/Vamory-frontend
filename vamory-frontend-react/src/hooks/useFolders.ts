@@ -25,7 +25,7 @@ export const useFolders = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [_currentPage, setCurrentPage] = useState(1);
   const [params, setParams] = useState<FoldersRequest>({
     per_page: 20,
     page: 1,

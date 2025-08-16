@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { X, Search, Share2, User as UserIcon, Mail, Shield, Eye, Edit, Crown, Trash2, Link2, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Search, Share2, User as UserIcon, Mail,  Eye, Edit, Crown, Trash2, Link2 } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
 import { usersAPI } from '../services/api';
-import { foldersAPI } from '../services/api';
 import type { Folder, ShareFolderRequest, User } from '../types';
 
 interface ShareFolderModalProps {

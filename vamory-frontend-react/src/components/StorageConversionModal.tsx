@@ -12,7 +12,7 @@ interface StorageConversionModalProps {
 
 export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: StorageConversionModalProps) => {
   const [newStorageType, setNewStorageType] = useState<'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE'>('STANDARD_IA');
-  const [applyToChildren, setApplyToChildren] = useState(true);
+  const [_applyToChildren, setApplyToChildren] = useState(true);
   const [retrievalDays, setRetrievalDays] = useState(5);
   const [retrievalMode, setRetrievalMode] = useState<'Standard' | 'Bulk'>('Bulk');
   const { changeStorageType, isLoading, error } = useFolderManager();
