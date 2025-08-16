@@ -9,6 +9,10 @@ interface AdminUserRoleModalProps {
   addUserButton?: React.ReactNode;
 }
 
+interface AdminUserRoleModalRef {
+  refreshUsers: () => void;
+}
+
 interface UserListItem {
   _id: string;
   full_name: string;
@@ -17,8 +21,8 @@ interface UserListItem {
   profile_pic?: string;
 }
 
-export const AdminUserRoleModal = forwardRef(function AdminUserRoleModal(
-  { isOpen, addUserButton }: AdminUserRoleModalProps,
+export const AdminUserRoleModal = forwardRef<AdminUserRoleModalRef, AdminUserRoleModalProps>(function AdminUserRoleModal(
+  { isOpen, addUserButton },
   ref
 ) {
   const [users, setUsers] = useState<UserListItem[] | null>(null);
@@ -31,7 +35,6 @@ export const AdminUserRoleModal = forwardRef(function AdminUserRoleModal(
 
   useEffect(() => {
     if (isOpen) fetchUsers(1);
-    // eslint-disable-next-line
   }, [isOpen]);
 
   const fetchUsers = async (pageNum: number) => {
@@ -76,7 +79,7 @@ export const AdminUserRoleModal = forwardRef(function AdminUserRoleModal(
 
   useImperativeHandle(ref, () => ({
     refreshUsers: () => fetchUsers(1)
-  }));
+  }), []);
 
   if (!isOpen) return null;
 
@@ -87,6 +90,11 @@ export const AdminUserRoleModal = forwardRef(function AdminUserRoleModal(
           <h3 className="text-2xl font-bold text-white tracking-tight">Manage User Roles</h3>
           {addUserButton}
         </div>
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-sm">
+            {error}
+          </div>
+        )}
         <div className="space-y-1">
           {loading ? (
             <div className="py-8 text-center text-gray-400 text-lg">Loading users...</div>

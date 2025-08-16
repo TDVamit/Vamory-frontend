@@ -77,6 +77,9 @@ export interface Folder {
   conversion_estimated_completion?: string;
   retrieval_days?: number;
   shared_by_name?: string;
+  public_token?: string; // Added for public sharing
+  is_public?: boolean;   // Added for public sharing
+  subfolders?: Folder[];
 }
 
 export interface CreateFolderRequest {
@@ -91,7 +94,10 @@ export interface UpdateFolderRequest {
 
 export interface ChangeStorageTypeRequest {
   new_storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
-  apply_to_children: boolean;
+  /**
+   * Always true. The conversion will always apply to all subfolders and files. Not user-configurable.
+   */
+  apply_to_children: true;
   retrieval_days?: number;
   retrieval_mode?: 'Standard' | 'Bulk';
 }
@@ -199,4 +205,31 @@ export interface AddFromGDriveResponse {
   message: string;
   folder_id?: string;
   status?: 'copying';
+}
+
+// Conversion Status API Response Types
+export interface FolderConversionStatusSuccess {
+  success: true;
+  message: string;
+  folders_updated: string[];
+  estimated_ready_time?: string;
+}
+
+export interface FolderConversionStatusPending {
+  success: false;
+  message: string;
+  not_converted_files: string[];
+  estimated_ready_time?: string;
+}
+
+export interface FolderConversionStatusError {
+  detail: string;
+}
+
+export type FolderConversionStatusResponse = FolderConversionStatusSuccess | FolderConversionStatusPending | FolderConversionStatusError;
+
+// Download endpoint response type
+export interface FileDownloadResponse {
+  download_url: string;
+  filename: string;
 }

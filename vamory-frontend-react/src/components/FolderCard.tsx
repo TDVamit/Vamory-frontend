@@ -6,6 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { EditFolderModal } from './EditFolderModal';
 import { StorageConversionModal } from './StorageConversionModal';
 import { ShareFolderModal } from './ShareFolderModal';
+import { ConversionStatusModal } from './ConversionStatusModal';
 import type { Folder as FolderType } from '../types';
 import type { FileData } from '../types';
 
@@ -15,9 +16,10 @@ interface FolderCardProps {
   onDelete?: () => void;
   onUpdate?: () => void;
   videoFile?: FileData; // Optional video file for the folder
+  isPublic?: boolean; // Add this prop
 }
 
-export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: FolderCardProps) => {
+export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile, isPublic }: FolderCardProps) => {
   const [showActions, setShowActions] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -25,15 +27,17 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
   const [showShareModal, setShowShareModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
-  const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
+  const [showConversionStatusModal, setShowConversionStatusModal] = useState(false);
+  const [_dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number}>({top: 0, left: 0});
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const { deleteFolder, isLoading: isDeleting, error } = useFolderManager();
+  
+  // Conditionally use useFolderManager hook
+  const { deleteFolder, isLoading: isDeleting, error } = isPublic ? { deleteFolder: async () => false, isLoading: false, error: null } : useFolderManager();
 
   // Calculate effective status based on conversion completion and retrieval days
-  const getEffectiveStatus = () => {
+  const getEffectiveStatus = (): 'active' | 'inactive' | 'converting' | 'copying' => {
     if (folder.status === 'copying') return 'copying';
     if (folder.status === 'converting') return 'converting';
     if (folder.status === 'inactive') return 'inactive';
@@ -55,11 +59,9 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
   const effectiveStatus = getEffectiveStatus();
   const isClickable = effectiveStatus === 'active';
   const canShowActions = effectiveStatus !== 'converting' && effectiveStatus !== 'copying'; // No actions for converting/copying
-  const canDelete = true; // All statuses can be deleted
   const canShare = !folder.shared_by_name; // Cannot share folders that are shared by others
   const isSharedByOthers = !!folder.shared_by_name; // Folder is shared by someone else
   const isSharedWithOthers = folder.shared_with && folder.shared_with.length > 0; // Folder is shared with others
-  const hasAnySharing = isSharedByOthers || isSharedWithOthers;
 
   const handleCardClick = () => {
     if (isClickable && onClick) {
@@ -201,6 +203,14 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
     }
   };
 
+  // Add this handler for conversion status check
+  const handleConversionStatusChecked = (shouldRefetch: boolean) => {
+    setShowConversionStatusModal(false);
+    if (shouldRefetch && onUpdate) {
+      onUpdate();
+    }
+  };
+
   // Default folder thumbnail
   const getDefaultThumbnail = () => {
     return (
@@ -293,7 +303,7 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
             {showActions && createPortal(
               <div 
                 ref={menuRef}
-                className="fixed bg-gray-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
+                className="fixed bg-black/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
                 style={{overflow: 'visible', top: dropdownPosition.top, left: dropdownPosition.left, minWidth: 140}}
               >
                 <button
@@ -307,51 +317,89 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
                   <Info className="w-4 h-4" />
                   Info
                 </button>
+                {/* Only show the rest of the options if not public */}
+                {!isPublic && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowActions(false);
+                        setShowEditModal(true);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowActions(false);
+                        handleStorageConversion();
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Convert Storage
+                    </button>
+                    {canShare && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowActions(false);
+                          handleShare();
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        {isSharedWithOthers ? 'Manage Shares' : 'Share'}
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(e);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>,
+              document.body
+            )}
+          </div>
+        )}
+        {!canShowActions && effectiveStatus === 'converting' && (
+          <div className={"absolute top-2 right-2 z-30"} ref={menuRef} style={{ overflow: 'visible' }}>
+            <div className="bg-black/60 rounded-lg p-1.5 flex items-center justify-center">
+              <button
+                ref={menuButtonRef}
+                onClick={handleMenuButtonClick}
+                className="text-gray-300 flex items-center justify-center focus:outline-none"
+                disabled={isDeleting}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </div>
+            {showActions && createPortal(
+              <div
+                ref={menuRef}
+                className="fixed bg-black/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
+                style={{overflow: 'visible', top: dropdownPosition.top, left: dropdownPosition.left, minWidth: 140}}
+              >
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowActions(false);
-                    setShowEditModal(true);
+                    setShowConversionStatusModal(true);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowActions(false);
-                    handleStorageConversion();
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-blue-700/30 hover:text-blue-200 transition-colors flex items-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Convert Storage
-                </button>
-                {canShare && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowActions(false);
-                      handleShare();
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-gray-100 transition-colors flex items-center gap-2"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    {isSharedWithOthers ? 'Manage Shares' : 'Share'}
-                  </button>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(e);
-                  }}
-                  disabled={isDeleting}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  Check Conversion Status
                 </button>
               </div>,
               document.body
@@ -367,6 +415,9 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
             </span>
           </div>
         )}
+
+        {/* Check Conversion Status Button for 'converting' folders */}
+        {/* This block is removed as per the edit hint */}
 
         {/* Shared Indicator - when folder is shared by someone else */}
         {isSharedByOthers && false && (
@@ -393,18 +444,18 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         {/* Metadata Overlay: Always show name, show stats only on hover */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-2">
           <div className="text-white">
-            <div className="relative h-10 flex items-center" style={{minHeight: '2.5rem'}}>
+            <div className="relative h-10 flex items-center" style={{minHeight: '3.2rem'}}>
               <h3 className={
                 `font-medium text-[11px] xs:text-xs sm:text-sm md:text-base text-shadow-lg flex items-center gap-2 truncate transition-all duration-300 absolute left-0 right-0 w-full ${
-                  'bottom-0 group-hover:top-0 group-hover:bottom-auto top-1/2 group-hover:translate-y-0 translate-y-1/2'
+                  'bottom-0 group-hover:top-0 group-hover:bottom-auto top-1 group-hover:translate-y-0 translate-y-[40%]'
                 }`
-              } title={folder.name} style={{textShadow: '2px 2px 4px rgba(0,0,0,0.8)', maxWidth: '100%'}}>
+              } title={folder.name} style={{textShadow: '2px 2px 4px rgba(0,0,0,0.8)', maxWidth: '100%', paddingBottom: 0, paddingTop: 2}}>
                 {/* Shared icon before folder name, in white */}
                 {isSharedWithOthers && !isSharedByOthers && (
-                  <span className="flex items-center"><Share2 className="w-4 h-4 text-white" /></span>
+                  <span className="flex items-center" style={{marginTop: 2}}><Share2 className="w-4 h-4 text-white" /></span>
                 )}
                 {isSharedByOthers && (
-                  <span className="flex items-center"><Users className="w-4 h-4 text-white" /></span>
+                  <span className="flex items-center" style={{marginTop: 2}}><Users className="w-4 h-4 text-white" /></span>
                 )}
                 <span className="truncate max-w-[70%]" title={folder.name}>{folder.name}</span>
               </h3>
@@ -485,17 +536,19 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={showDeleteDialog}
-        title="Delete Folder"
-        message={`Are you sure you want to delete "${folder.name}"? This action cannot be undone and will permanently delete all files and subfolders within it.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
-      />
+      {/* Delete Confirmation Dialog - Only show if not public */}
+      {!isPublic && (
+        <ConfirmDialog
+          isOpen={showDeleteDialog}
+          title="Delete Folder"
+          message={`Are you sure you want to delete "${folder.name}"? This action cannot be undone and will permanently delete all files and subfolders within it.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
 
       {/* Edit Folder Modal - Only for active folders */}
       {canShowActions && (
@@ -549,6 +602,14 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile }: F
           </div>
         )
       )}
+
+      {/* Conversion Status Modal */}
+      <ConversionStatusModal
+        isOpen={showConversionStatusModal}
+        folder={folder}
+        onClose={() => setShowConversionStatusModal(false)}
+        onStatusChecked={handleConversionStatusChecked}
+      />
     </>
   )
 } 

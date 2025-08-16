@@ -12,7 +12,7 @@ interface StorageConversionModalProps {
 
 export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: StorageConversionModalProps) => {
   const [newStorageType, setNewStorageType] = useState<'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE'>('STANDARD_IA');
-  const [applyToChildren, setApplyToChildren] = useState(false);
+  const [applyToChildren, setApplyToChildren] = useState(true);
   const [retrievalDays, setRetrievalDays] = useState(5);
   const [retrievalMode, setRetrievalMode] = useState<'Standard' | 'Bulk'>('Bulk');
   const { changeStorageType, isLoading, error } = useFolderManager();
@@ -21,7 +21,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
   useEffect(() => {
     if (isOpen) {
       setNewStorageType(folder.storage_type === 'DEEP_ARCHIVE' ? 'STANDARD_IA' : 'DEEP_ARCHIVE');
-      setApplyToChildren(false);
+      setApplyToChildren(true); // Always true
       setRetrievalDays(5);
       setRetrievalMode('Bulk');
     }
@@ -37,7 +37,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
     
     const requestData: ChangeStorageTypeRequest = {
       new_storage_type: newStorageType,
-      apply_to_children: applyToChildren,
+      apply_to_children: true, // Always true
     };
 
     if (needsRetrievalSettings) {
@@ -198,7 +198,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
           )}
 
           {/* Apply to Children */}
-          <div className="mb-6">
+          {/*
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -208,7 +208,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
               />
               <span className="text-sm text-gray-300">Apply to all subfolders and files</span>
             </label>
-          </div>
+          */}
 
           {/* Error Display */}
           {error && (

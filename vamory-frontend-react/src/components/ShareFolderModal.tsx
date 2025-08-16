@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Search, Share2, User as UserIcon, Mail, Shield, Eye, Edit, Crown, Trash2 } from 'lucide-react';
+import { X, Search, Share2, User as UserIcon, Mail, Shield, Eye, Edit, Crown, Trash2, Link2, Lock } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
 import { usersAPI } from '../services/api';
+import { foldersAPI } from '../services/api';
 import type { Folder, ShareFolderRequest, User } from '../types';
 
 interface ShareFolderModalProps {
@@ -19,7 +20,12 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [revokingEmail, setRevokingEmail] = useState<string | null>(null);
-  const { shareFolder, revokeShareFolder, isLoading, error } = useFolderManager();
+  const { shareFolder, revokeShareFolder, isLoading, error, makeFolderPublic, makeFolderPrivate } = useFolderManager();
+  const [publicToken, setPublicToken] = useState<string | null>(folder.public_token || null);
+  const [isPublic, setIsPublic] = useState<boolean>(!!folder.is_public);
+  const [publicLoading, setPublicLoading] = useState(false);
+  const [publicError, setPublicError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -30,8 +36,10 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
       setAccessLevel('read');
       setSearchError(null);
       setRevokingEmail(null);
+      setPublicToken(folder.public_token || null);
+      setIsPublic(!!folder.is_public);
     }
-  }, [isOpen]);
+  }, [isOpen, folder]);
 
   // Debounced user search
   useEffect(() => {
@@ -94,6 +102,45 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
     setRevokingEmail(null);
   };
 
+  const handleMakePublic = async () => {
+    setPublicLoading(true);
+    setPublicError(null);
+    const result = await makeFolderPublic(folder._id);
+    if (result && result.public_token) {
+      setPublicToken(result.public_token);
+      setIsPublic(true);
+      // Do not call onSuccess or refresh, just update UI
+    } else {
+      setPublicError(error || 'Failed to make folder public');
+    }
+    setPublicLoading(false);
+  };
+
+  const handleMakePrivate = async () => {
+    setPublicLoading(true);
+    setPublicError(null);
+    const result = await makeFolderPrivate(folder._id);
+    if (result && result.message) {
+      setPublicToken(null);
+      setIsPublic(false);
+      // Do not call onSuccess or refresh, just update UI
+    } else if (result && result.reason) {
+      setPublicError(result.reason);
+      // Do not change UI state, keep Make Private button
+    } else {
+      setPublicError(error || 'Failed to make folder private');
+    }
+    setPublicLoading(false);
+  };
+
+  const handleCopyLink = () => {
+    if (publicLink) {
+      navigator.clipboard.writeText(publicLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    }
+  };
+
   const getAccessLevelIcon = (level: string) => {
     switch (level) {
       case 'read':
@@ -119,6 +166,9 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
         return '';
     }
   };
+
+  const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+  const publicLink = publicToken ? `${frontendUrl}/shared/folder?token=${publicToken}&folder_id=${folder._id}` : '';
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
@@ -146,7 +196,7 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
               <div className="w-8 h-8 bg-gray-800/60 rounded-lg flex items-center justify-center">
                 <Share2 className="w-4 h-4 text-gray-400" />
               </div>
-              <div>
+              <div className="flex-1">
                 <div className="text-white font-medium">{folder.name}</div>
                 <div className="text-sm text-gray-400">
                   {folder.shared_with && folder.shared_with.length > 0 
@@ -155,7 +205,61 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
                   }
                 </div>
               </div>
+              {/* Public/Private Controls */}
+              <div className="flex flex-col items-end gap-2 ml-4">
+                {isPublic ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-green-400" />
+                      <span className="text-green-400 text-xs">Public</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleMakePrivate}
+                      disabled={publicLoading}
+                      className="px-2 py-1 text-xs bg-red-700/30 text-red-200 rounded hover:bg-red-700/50 disabled:opacity-50"
+                    >
+                      {publicLoading ? 'Making Private...' : 'Make Private'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleMakePublic}
+                    disabled={publicLoading}
+                    className="px-2 py-1 text-xs bg-green-700/30 text-green-200 rounded hover:bg-green-700/50 disabled:opacity-50"
+                  >
+                    {publicLoading ? 'Making Public...' : 'Make Public'}
+                  </button>
+                )}
+              </div>
             </div>
+            {/* Public Link Display */}
+            {isPublic && publicToken && (
+              <div className="mt-3 flex items-center gap-2 bg-black/30 border border-green-700/30 rounded-lg p-2 relative">
+                <Link2 className="w-4 h-4 text-green-400" />
+                <input
+                  type="text"
+                  value={publicLink}
+                  readOnly
+                  className="flex-1 bg-transparent text-green-300 text-xs px-2 py-1 outline-none"
+                  onFocus={e => e.target.select()}
+                />
+                <button
+                  type="button"
+                  className="text-xs text-green-300 hover:underline"
+                  onClick={handleCopyLink}
+                >
+                  Copy Link
+                </button>
+                {linkCopied && (
+                  <span className="absolute right-2 top-[-1.5rem] bg-green-800 text-green-100 text-xs px-2 py-1 rounded shadow">Copied!</span>
+                )}
+              </div>
+            )}
+            {publicError && (
+              <div className="mt-2 text-xs text-red-400">{publicError}</div>
+            )}
           </div>
 
           {/* Current Shares */}

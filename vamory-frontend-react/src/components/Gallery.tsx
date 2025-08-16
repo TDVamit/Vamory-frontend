@@ -1,16 +1,21 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, RefreshCw, LogOut, User, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Sparkles, RotateCcw } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useFolders } from '../hooks/useFolders';
 import { FolderCard } from './FolderCard';
+import { FileCard } from './FileCard';
 import { CreateFolderModal } from './CreateFolderModal';
-import { AddFromGDriveModal } from './CreateFolderModal';
+import { MediaGallery } from './MediaGallery';
+import { AddFromGDriveModal } from './AddFromGDriveModal';
 import { Header } from './Header';
 import { UserRole } from '../types';
 import React from 'react';
 import { ActionDropdown } from './ActionDropdown';
+import { AISearchToggle } from './AISearchToggle';
+import { aiSearchAPI } from '../services/api';
+import type { FileData } from '../types';
 
 export const Gallery = () => {
   const navigate = useNavigate();
@@ -21,8 +26,14 @@ export const Gallery = () => {
   const [isAddFromGDriveOpen, setIsAddFromGDriveOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [isPausedByUser, setIsPausedByUser] = useState(false);
+  const [isPausedByUser, _setIsPausedByUser] = useState(false);
   const [carouselFolders, setCarouselFolders] = useState<any[]>([]);
+  const [isAISearchEnabled, setIsAISearchEnabled] = useState(true); // Default to enabled
+  const [aiSearchResults, setAiSearchResults] = useState<{ categories: Record<string, FileData[]> } | null>(null);
+  const [isAISearchLoading, setIsAISearchLoading] = useState(false);
+  const [isAIReloading, setIsAIReloading] = useState(false);
+  const [showAISearchGallery, setShowAISearchGallery] = useState(false);
+  const [aiSearchGalleryIndex, setAiSearchGalleryIndex] = useState(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const autoPlayRef = useRef<number | null>(null);
@@ -43,15 +54,20 @@ export const Gallery = () => {
     folderOptions
   );
 
+  // When AI search is enabled, we don't want to use the regular folder search
+  // So we'll conditionally disable the useFolders hook when AI search is enabled
+  const effectiveFolders = isAISearchEnabled && searchQuery ? [] : folders;
+  const effectiveIsLoading = isAISearchEnabled && searchQuery ? isAISearchLoading : isLoading;
+
   // Set carousel folders only from the initial load (not from search results)
   useEffect(() => {
-    if (!searchQuery && folders.length > 0) {
-      const foldersWithThumbnails = folders.filter(folder => folder.thumbnail_url).slice(0, 10);
+    if (!searchQuery && effectiveFolders.length > 0) {
+      const foldersWithThumbnails = effectiveFolders.filter(folder => folder.thumbnail_url).slice(0, 10);
       if (foldersWithThumbnails.length > 0) {
         setCarouselFolders(foldersWithThumbnails);
       }
     }
-  }, [folders, searchQuery]);
+  }, [effectiveFolders, searchQuery]);
 
   // Reset current slide when carousel folders change
   useEffect(() => {
@@ -65,7 +81,7 @@ export const Gallery = () => {
     if (isAutoPlaying && !isPausedByUser && carouselFolders.length > 1) {
       autoPlayRef.current = window.setInterval(() => {
         setCurrentSlide(prev => (prev + 1) % carouselFolders.length);
-      }, 2000); // Change slide every 2 seconds (was 4 seconds)
+      }, 5000); // Change slide every 5 seconds (was 2 seconds)
     }
 
     return () => {
@@ -75,43 +91,20 @@ export const Gallery = () => {
     };
   }, [isAutoPlaying, isPausedByUser, carouselFolders.length]);
 
-  const nextSlide = () => {
-    setCurrentSlide(prev => (prev + 1) % carouselFolders.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide(prev => (prev - 1 + carouselFolders.length) % carouselFolders.length);
-  };
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
   };
 
-  const toggleAutoPlay = () => {
-    setIsPausedByUser(!isPausedByUser);
-    setIsAutoPlaying(!isPausedByUser);
-  };
+
 
   // Debounced search - but don't reset carousel
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      search(searchQuery);
-    }, 500);
-
-    setSearchTimeout(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [searchQuery, search]);
+  // REMOVED: This useEffect was causing regular search to be called even when AI search was enabled
+  // The search is now handled manually in handleSearchChange and handleSearchKeyPress
 
   // Infinite scroll observer - disable during search
   const lastFolderElementRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading || searchQuery) return;
+    if (effectiveIsLoading || searchQuery) return;
     if (observerRef.current) observerRef.current.disconnect();
     
     observerRef.current = new IntersectionObserver(entries => {
@@ -121,14 +114,20 @@ export const Gallery = () => {
     });
     
     if (node) observerRef.current.observe(node);
-  }, [isLoading, hasMore, loadMore, searchQuery]);
+  }, [effectiveIsLoading, hasMore, loadMore, searchQuery]);
 
   const handleCreateFolderSuccess = () => {
     refresh(); // Refresh the folder list
   };
 
-  const handleAddFromGDriveSuccess = () => {
+  const handleAddFromGDriveSuccess = async () => {
     refresh();
+    // Reload AI search index after adding from Google Drive
+    try {
+      await aiSearchAPI.reload();
+    } catch (error) {
+      console.error('AI reload failed after Google Drive upload:', error);
+    }
   };
 
   const handleFolderClick = (folderId: string) => {
@@ -141,6 +140,123 @@ export const Gallery = () => {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Only search when user finishes typing (after 1 second of no input)
+    const newTimeout = window.setTimeout(async () => {
+      if (value.trim()) {
+        if (isAISearchEnabled) {
+          // Use AI search
+          setIsAISearchLoading(true);
+          try {
+            const results = await aiSearchAPI.search(value);
+            setAiSearchResults(results);
+          } catch (error) {
+            console.error('AI search failed:', error);
+            // Don't fallback to regular search, just show error
+            setAiSearchResults(null);
+          } finally {
+            setIsAISearchLoading(false);
+          }
+        } else {
+          // Use regular search
+          setAiSearchResults(null);
+          search(value);
+        }
+      } else {
+        // If query is empty, clear AI results and show all folders
+        setAiSearchResults(null);
+        // Only refresh if AI search is disabled, otherwise let the folders stay as they are
+        if (!isAISearchEnabled) {
+          refresh();
+        }
+      }
+    }, 1000); // Increased to 1 second to wait for user to finish typing
+    
+    setSearchTimeout(newTimeout);
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      // Clear the timeout and search immediately
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      const value = searchQuery.trim();
+      if (value) {
+        if (isAISearchEnabled) {
+          // Use AI search
+          setIsAISearchLoading(true);
+          aiSearchAPI.search(value)
+            .then(results => {
+              setAiSearchResults(results);
+            })
+            .catch(error => {
+              console.error('AI search failed:', error);
+              // Don't fallback to regular search, just show error
+              setAiSearchResults(null);
+            })
+            .finally(() => {
+              setIsAISearchLoading(false);
+            });
+        } else {
+          // Use regular search
+          setAiSearchResults(null);
+          search(value);
+        }
+      } else {
+        // If query is empty, clear AI results and show all folders
+        setAiSearchResults(null);
+        // Only refresh if AI search is disabled, otherwise let the folders stay as they are
+        if (!isAISearchEnabled) {
+          refresh();
+        }
+      }
+    }
+  };
+
+  // AI Search Gallery handlers
+  const handleAISearchFileClick = (file: FileData) => {
+    if (file.file_type === 'image' || file.file_type === 'video') {
+      // Flatten all AI search results into a single array
+      const allAIFiles = Object.values(aiSearchResults?.categories || {}).flat();
+      const mediaFiles = allAIFiles.filter(f => f.file_type === 'image' || f.file_type === 'video');
+      const mediaIndex = mediaFiles.findIndex(f => f._id === file._id);
+      if (mediaIndex !== -1) {
+        setAiSearchGalleryIndex(mediaIndex);
+        setShowAISearchGallery(true);
+      }
+    }
+  };
+
+  const handleAISearchGalleryClose = () => {
+    setShowAISearchGallery(false);
+  };
+
+  const handleAISearchGalleryNavigate = (index: number) => {
+    setAiSearchGalleryIndex(index);
+  };
+
+  // AI Search Reload function
+  const handleAIReload = async () => {
+    setIsAIReloading(true);
+    try {
+      await aiSearchAPI.reload();
+      // If there's a current search query, re-run the search
+      if (searchQuery.trim()) {
+        const results = await aiSearchAPI.search(searchQuery);
+        setAiSearchResults(results);
+      }
+    } catch (error) {
+      console.error('AI reload failed:', error);
+    } finally {
+      setIsAIReloading(false);
+    }
   };
 
   const handleFolderDeleted = (deletedFolderId: string) => {
@@ -244,15 +360,23 @@ export const Gallery = () => {
             <div className="w-full p-6">
               {/* Search Bar with Glass Effect */}
               <div className="max-w-2xl mx-auto">
-                <div className="relative backdrop-blur-md bg-white/10 rounded-xl border border-gray-600/30">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="relative backdrop-blur-md bg-white/10 rounded-xl border border-gray-600/30 flex items-center min-h-[56px]">
+                  <Search className="absolute left-4 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
                     placeholder="Search folders..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pl-12 pr-6 py-4 bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 rounded-xl text-lg"
+                    onKeyPress={handleSearchKeyPress}
+                    className="flex-1 pl-12 pr-4 py-4 bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 rounded-l-xl text-lg"
                   />
+                  <div className="pr-2 flex items-center h-full">
+                    <AISearchToggle
+                      isEnabled={isAISearchEnabled}
+                      onToggle={setIsAISearchEnabled}
+                      className="rounded-l-none rounded-r-xl"
+                    />
+                  </div>
                 </div>
               </div>
               {/* Slide Indicators */}
@@ -284,7 +408,7 @@ export const Gallery = () => {
           </div>
         )}
 
-        {folders.length === 0 && !isLoading && !error ? (
+        {effectiveFolders.length === 0 && !effectiveIsLoading && !error && !aiSearchResults ? (
           <div className="text-center py-16">
             <div className="w-20 h-20 bg-gray-700/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-600/20">
               <Plus className="w-10 h-10 text-gray-400" />
@@ -310,12 +434,59 @@ export const Gallery = () => {
           </div>
         ) : (
           <React.Fragment>
+            {/* AI Search Results */}
+            {aiSearchResults && !isAISearchLoading && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-light text-white mb-0">
+                      AI Search Results
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Powered by AI</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleAIReload}
+                    disabled={isAIReloading}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 bg-gray-800/20 text-gray-300 border border-gray-600/30 hover:bg-gray-700/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Reload AI Search Index"
+                  >
+                    <RotateCcw className={`w-4 h-4 ${isAIReloading ? 'animate-spin' : ''}`} />
+                    <span className="text-sm font-medium">
+                      {isAIReloading ? 'Reloading...' : 'Reload'}
+                    </span>
+                  </button>
+                </div>
+                {Object.entries(aiSearchResults.categories).map(([category, files]) => (
+                  <div key={category} className="mb-8">
+                    <h4 className="text-md font-medium text-gray-300 mb-4 capitalize">
+                      {category} ({files.length})
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-6">
+                      {files.map((file) => (
+                        <div key={file._id} className="animate-fade-in">
+                          <div onClick={() => handleAISearchFileClick(file)}>
+                            <FileCard
+                              file={file}
+                              isPublic={false}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             {/* All Folders Grid */}
-            {folders.length > 0 && (
+            {effectiveFolders.length > 0 && (
               <div className="mb-12">
                 <div className="flex flex-row items-center justify-between mb-6 gap-4">
                   <h3 className="text-lg font-light text-white mb-0">
-                    {searchQuery ? `Search Results (${folders.length})` : 'All Folders'}
+                    {searchQuery ? `Search Results (${effectiveFolders.length})` : 'All Folders'}
                   </h3>
                   <ActionDropdown
                     options={[
@@ -333,10 +504,10 @@ export const Gallery = () => {
                   />
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-6">
-                  {folders.map((folder, index) => (
+                  {effectiveFolders.map((folder, index) => (
                     <div
                       key={folder._id}
-                      ref={index === folders.length - 1 ? lastFolderElementRef : null}
+                      ref={index === effectiveFolders.length - 1 ? lastFolderElementRef : null}
                       className="animate-fade-in"
                     >
                       <FolderCard
@@ -344,6 +515,7 @@ export const Gallery = () => {
                         onClick={() => handleFolderClick(folder._id)}
                         onDelete={() => handleFolderDeleted(folder._id)}
                         onUpdate={refresh}
+                        isPublic={!!folder.shared_by_name} // Hide delete options for folders shared by others
                       />
                     </div>
                   ))}
@@ -352,11 +524,18 @@ export const Gallery = () => {
             )}
 
             {/* Loading indicator */}
-            {isLoading && (
+            {(effectiveIsLoading || isAISearchLoading) && (
               <div className="flex items-center justify-center py-8">
                 <div className="flex items-center gap-3 text-gray-400 bg-gray-800/30 backdrop-blur-sm px-6 py-3 rounded-xl border border-gray-600/20">
                   <div className="w-5 h-5 border border-gray-500 border-t-gray-300 rounded-full animate-spin" />
-                  <span>{searchQuery ? 'Searching folders...' : 'Loading folders...'}</span>
+                  <span>
+                    {isAISearchLoading 
+                      ? 'AI searching...' 
+                      : searchQuery 
+                        ? 'Searching folders...' 
+                        : 'Loading folders...'
+                    }
+                  </span>
                 </div>
               </div>
             )}
@@ -378,6 +557,17 @@ export const Gallery = () => {
         onClose={() => setIsAddFromGDriveOpen(false)}
         onSuccess={handleAddFromGDriveSuccess}
       />
+
+      {/* AI Search Media Gallery */}
+      {showAISearchGallery && aiSearchResults && (
+        <MediaGallery
+          files={Object.values(aiSearchResults.categories).flat().filter(f => f.file_type === 'image' || f.file_type === 'video')}
+          currentIndex={aiSearchGalleryIndex}
+          onClose={handleAISearchGalleryClose}
+          onNavigate={handleAISearchGalleryNavigate}
+          isPublic={false}
+        />
+      )}
     </div>
   );
 }; 

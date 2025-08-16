@@ -48,8 +48,8 @@ export const ActionDropdown = ({ options, className = '' }: ActionDropdownProps)
         <MoreVertical className="w-5 h-5" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-black/40 border border-gray-700/40 z-50 py-1 backdrop-blur-md">
-          {options.map((opt, idx) => (
+        <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-black/80 border border-gray-700/40 z-50 py-1 backdrop-blur-md">
+          {options.map((opt) => (
             <button
               key={opt.label}
               onClick={() => {

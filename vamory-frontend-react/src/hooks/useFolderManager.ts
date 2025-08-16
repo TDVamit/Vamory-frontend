@@ -118,6 +118,43 @@ export const useFolderManager = () => {
     }
   };
 
+  // Make folder public
+  const makeFolderPublic = async (folderId: string): Promise<{ message: string; public_token: string } | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await foldersAPI.makeFolderPublic(folderId);
+      return result;
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Failed to make folder public');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Make folder private
+  const makeFolderPrivate = async (folderId: string): Promise<{ message?: string; reason?: string; success?: boolean } | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await foldersAPI.makeFolderPrivate(folderId);
+      return result;
+    } catch (err: any) {
+      // Try to extract 'reason' and 'success' from backend error response
+      const reason = err?.response?.data?.reason;
+      const success = err?.response?.data?.success;
+      if (reason) {
+        setError(reason);
+        return { reason, success };
+      }
+      setError(err?.response?.data?.detail || 'Failed to make folder private');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const clearError = () => {
     setError(null);
   };
@@ -133,5 +170,7 @@ export const useFolderManager = () => {
     revokeShareFolder,
     getFolderDetails,
     clearError,
+    makeFolderPublic,
+    makeFolderPrivate,
   };
 }; 

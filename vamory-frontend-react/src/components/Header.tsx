@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown } from 'lucide-react';
+import { User, LogOut, ChevronDown, Home, DollarSign } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileModal } from './ProfileModal';
+import { Link, useLocation } from 'react-router-dom';
 
 export const Header = () => {
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   // Handle click outside to close menu
   useEffect(() => {
@@ -38,11 +40,37 @@ export const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/20">
       <div className="max-w-7xl w-full mx-auto px-6 min-w-0">
         <div className="flex items-center justify-between h-14 min-w-0">
-          {/* Left side - Logo */}
-          <div className="flex items-center gap-4">
-            <a href="/" className="flex items-center">
+          {/* Left side - Logo and Navigation */}
+          <div className="flex items-center gap-6">
+            <Link to="/gallery" className="flex items-center">
               <img src="/VD Logo Funky.png" alt="Vamory Logo" className="w-10 h-10 object-contain" />
-            </a>
+            </Link>
+            
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center gap-4">
+              <Link
+                to="/home"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  location.pathname === '/home'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Home className="w-4 h-4" />
+                <span className="text-sm font-medium">Home</span>
+              </Link>
+              <Link
+                to="/pricing"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  location.pathname === '/pricing'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                <span className="text-sm font-medium">Pricing</span>
+              </Link>
+            </nav>
           </div>
 
           {/* Right side - Profile and logout */}

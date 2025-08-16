@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef} from 'react';
 import { Upload, X, FileText, CheckCircle, AlertCircle, Plus } from 'lucide-react';
-import api, { filesAPI, API_BASE_URL } from '../services/api';
+import api, {  API_BASE_URL } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { UserRole } from '../types';
 
@@ -158,11 +158,16 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
     setError('');
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    // Only allow images and videos
+    const allowed = files.filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    if (allowed.length !== files.length) {
+      setError('Only images and videos can be uploaded.');
+    }
     // Filter out duplicates
     const existingNames = new Set(selectedFiles.map(f => f.file.name + f.file.size));
-    const newFiles = files.filter(f => !existingNames.has(f.name + f.size));
+    const newFiles = allowed.filter(f => !existingNames.has(f.name + f.size));
     if (newFiles.length === 0) {
-      setError('All selected files are already added.');
+      setError('All selected files are already added or not allowed.');
       return;
     }
     setSelectedFiles(prev => [
@@ -339,6 +344,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
             multiple
             onChange={handleFileSelect}
             className="hidden"
+            accept="image/*,video/*"
           />
           {selectedFiles.length === 0 ? (
             <div className="space-y-4">

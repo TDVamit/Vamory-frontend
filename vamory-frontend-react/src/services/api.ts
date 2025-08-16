@@ -19,7 +19,8 @@ import type {
   UpdateFileRequest,
   PaginatedResponse,
   AddFromGDriveRequest,
-  AddFromGDriveResponse
+  AddFromGDriveResponse,
+  FileDownloadResponse
 } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000';
@@ -35,9 +36,9 @@ const api = axios.create({
 let accessToken: string | null = localStorage.getItem('access_token');
 let refreshToken: string | null = localStorage.getItem('refresh_token');
 let isRefreshing = false;
-let failedQueue: Array<{resolve: Function; reject: Function}> = [];
+let failedQueue: Array<{resolve: (value: unknown) => void; reject: (reason?: Error) => void;}> = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);
@@ -63,7 +64,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip redirect for public endpoints
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !(originalRequest.url && originalRequest.url.includes('/api/v1/public/'))
+    ) {
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -111,7 +117,7 @@ api.interceptors.response.use(
         return api.request(originalRequest);
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
-        processQueue(refreshError, null);
+        processQueue(refreshError as Error, null);
         
         // Clear all tokens
         localStorage.removeItem('access_token');
@@ -205,11 +211,12 @@ const refreshAccessToken = async (data: RefreshTokenRequest): Promise<AuthRespon
     });
     
     return response.data;
-  } catch (error: any) {
-    console.error('Refresh token request failed:', error.response?.status, error.response?.statusText);
+  } catch (error) {
+    const axiosError = error as import('axios').AxiosError;
+    console.error('Refresh token request failed:', axiosError.response?.status, axiosError.response?.statusText);
     
     // If refresh token is invalid/expired, the server typically returns 401
-    if (error.response?.status === 401) {
+    if (axiosError.response?.status === 401) {
       console.log('Refresh token expired or invalid');
     }
     
@@ -219,7 +226,7 @@ const refreshAccessToken = async (data: RefreshTokenRequest): Promise<AuthRespon
 
 // Folders API calls
 export const foldersAPI = {
-  getRootFolders: async (params: FoldersRequest = {}): Promise<{ folders: Folder[]; has_more: boolean; total: number; meta?: any }> => {
+  getRootFolders: async (params: FoldersRequest = {}): Promise<{ folders: Folder[]; has_more: boolean; total: number; meta?: import('../types').PaginationMeta }> => {
     const filtered = Object.fromEntries(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
     );
@@ -232,7 +239,7 @@ export const foldersAPI = {
         folders: data.data,
         has_more: data.meta.has_next,
         total: data.meta.total_count,
-        meta: data.meta,
+        meta: data.meta as import('../types').PaginationMeta,
       };
     }
     // Handle legacy array response
@@ -269,7 +276,7 @@ export const foldersAPI = {
   },
 
   // New method for paginated folders search
-  getFoldersPaginated: async (params: FoldersRequest = {}): Promise<{ folders: Folder[]; has_more: boolean; total: number; meta?: any }> => {
+  getFoldersPaginated: async (params: FoldersRequest = {}): Promise<{ folders: Folder[]; has_more: boolean; total: number; meta?: import('../types').PaginationMeta }> => {
     const filtered = Object.fromEntries(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
     );
@@ -282,7 +289,7 @@ export const foldersAPI = {
         folders: data.data,
         has_more: data.meta.has_next,
         total: data.meta.total_count,
-        meta: data.meta,
+        meta: data.meta as import('../types').PaginationMeta,
       };
     }
     // Handle legacy array response
@@ -352,6 +359,30 @@ export const foldersAPI = {
     const response = await api.delete(`/api/v1/folders/${folderId}/share/${encodedEmail}`);
     return response.data;
   },
+
+  /**
+   * Check conversion status for a folder
+   */
+  checkConversionStatus: async (folderId: string): Promise<import('../types').FolderConversionStatusResponse> => {
+    const response = await api.post(`/api/v1/folders/${folderId}/check-conversion`);
+    return response.data;
+  },
+
+  /**
+   * Make a folder public (and all subfolders)
+   */
+  makeFolderPublic: async (folderId: string): Promise<{ message: string; public_token: string }> => {
+    const response = await api.post(`/api/v1/folders/${folderId}/make-public`);
+    return response.data;
+  },
+
+  /**
+   * Make a folder private (and all subfolders)
+   */
+  makeFolderPrivate: async (folderId: string): Promise<{ message: string }> => {
+    const response = await api.post(`/api/v1/folders/${folderId}/make-private`);
+    return response.data;
+  },
 };
 
 // Files API calls
@@ -398,7 +429,7 @@ export const filesAPI = {
     return response.data;
   },
 
-  downloadFile: async (fileId: string): Promise<string> => {
+  downloadFile: async (fileId: string): Promise<FileDownloadResponse> => {
     const response = await api.get(`/api/v1/files/${fileId}/download`);
     return response.data;
   },
@@ -409,7 +440,7 @@ export const filesAPI = {
   },
 
   // Bulk download multiple files
-  bulkDownloadFiles: async (fileIds: string[]): Promise<{ [fileId: string]: string }> => {
+  bulkDownloadFiles: async (fileIds: string[]): Promise<{ [fileId: string]: FileDownloadResponse }> => {
     const response = await api.post('/api/v1/files/bulk-download', { file_ids: fileIds });
     return response.data;
   },
@@ -477,7 +508,7 @@ initializeTokens();
 
 // Users API calls
 export const usersAPI = {
-  searchUsers: async (params: UserSearchRequest = {}): Promise<{ users: User[]; has_more: boolean; total: number; meta?: any }> => {
+  searchUsers: async (params: UserSearchRequest = {}): Promise<{ users: User[]; has_more: boolean; total: number; meta?: import('../types').PaginationMeta }> => {
     const filtered = Object.fromEntries(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
     );
@@ -490,7 +521,7 @@ export const usersAPI = {
         users: data.data,
         has_more: data.meta.has_next,
         total: data.meta.total_count,
-        meta: data.meta,
+        meta: data.meta as import('../types').PaginationMeta,
       };
     }
     // Fallback for unexpected format
@@ -499,6 +530,68 @@ export const usersAPI = {
       has_more: false,
       total: 0,
     };
+  },
+};
+
+// AI Search API
+export const aiSearchAPI = {
+  /**
+   * Search files using AI with optional folder_id filter
+   */
+  search: async (query: string, folderId?: string): Promise<{ categories: Record<string, FileData[]> }> => {
+    const params: any = { query };
+    if (folderId) {
+      params.folder_id = folderId;
+    }
+    const response = await api.get('/api/v1/ai-search/', { params });
+    return response.data;
+  },
+
+  /**
+   * Reload AI search index
+   */
+  reload: async (): Promise<void> => {
+    await api.post('/api/v1/ai-search/reload');
+  },
+};
+
+// Public folder API (no auth required)
+export const publicFoldersAPI = {
+  /**
+   * Get public folder info by token and folder_id
+   */
+  getPublicFolder: async (publicToken: string, folderId: string): Promise<Folder> => {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/folders/public/folders/`, {
+      params: { token: publicToken, folder_id: folderId },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get files in a public folder by token and folder_id
+   */
+  getPublicFolderFiles: async (
+    publicToken: string,
+    folderId: string,
+    params: FilesRequest = {}
+  ): Promise<PaginatedResponse<FileData>> => {
+    const filteredParams = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    );
+    const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/`, {
+      params: { token: publicToken, folder_id: folderId, ...filteredParams },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get a public file by ID and token
+   */
+  getPublicFileById: async (fileId: string, publicToken: string): Promise<FileData> => {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/file`, {
+      params: { token: publicToken, file_id: fileId },
+    });
+    return response.data;
   },
 };
 

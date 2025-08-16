@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { filesAPI } from '../services/api';
-import type { FileData, UploadFileResponse, UpdateFileRequest } from '../types';
+import type { FileData, UploadFileResponse, UpdateFileRequest, FileDownloadResponse } from '../types';
 
 export const useFileManager = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -82,13 +82,13 @@ export const useFileManager = () => {
     }
   };
 
-  const downloadFile = async (fileId: string): Promise<string | null> => {
+  const downloadFile = async (fileId: string): Promise<FileDownloadResponse | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const downloadUrl = await filesAPI.downloadFile(fileId);
-      return downloadUrl;
+      const response = await filesAPI.downloadFile(fileId);
+      return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to download file';
       setError(errorMessage);
