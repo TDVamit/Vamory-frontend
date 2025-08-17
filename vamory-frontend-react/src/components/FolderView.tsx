@@ -9,7 +9,7 @@ import { FileUpload } from './FileUpload';
 import { Header } from './Header';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MediaGallery } from './MediaGallery';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth0Custom } from '../hooks/useAuth0';
 import { UserRole } from '../types';
 import type { Folder as FolderType, FileData } from '../types';
 import { ActionDropdown } from './ActionDropdown';
@@ -87,7 +87,7 @@ export const FolderView = () => {
     }
   };
 
-  const { user } = useAuth();
+  const { user } = useAuth0Custom();
   const userRole = user?.user_role;
   const canCreateFolder = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user;
   const canUpload = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user || userRole === UserRole.editor;

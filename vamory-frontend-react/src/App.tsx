@@ -1,18 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './hooks/useAuth';
-import { AuthForm } from './components/AuthForm';
 import { Gallery } from './components/Gallery';
 import { FolderView } from './components/FolderView';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicFolderView } from './components/PublicFolderView';
 import HomePage from './components/HomePage';
 import PricingPage from './components/PricingPage';
-import { useAuth } from './hooks/useAuth';
+import { useAuth0Custom } from './hooks/useAuth0';
 import './App.css';
 
 // Component to handle root path redirect logic
 const RootRedirect = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth0Custom();
   
   if (isLoading) {
     return (
@@ -35,40 +33,37 @@ const RootRedirect = () => {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Root path with conditional redirect */}
-          <Route path="/" element={<RootRedirect />} />
-          
-          {/* Public routes */}
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          
-          {/* Shared folder browsing routes (public, not wrapped in ProtectedRoute) */}
-          <Route path="/shared/folder" element={<PublicFolderView />} />
-          <Route path="/shared/folder/:params" element={<PublicFolderView />} />
+      <Routes>
+        {/* Root path with conditional redirect */}
+        <Route path="/" element={<RootRedirect />} />
+        
+        {/* Public routes */}
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        
+        {/* Shared folder browsing routes (public, not wrapped in ProtectedRoute) */}
+        <Route path="/shared/folder" element={<PublicFolderView />} />
+        <Route path="/shared/folder/:params" element={<PublicFolderView />} />
 
-          {/* Auth-protected routes */}
-          <Route
-            path="/gallery"
-            element={
-              <ProtectedRoute>
-                <Gallery />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/folder/:folderId"
-            element={
-              <ProtectedRoute>
-                <FolderView />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<AuthForm />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      </AuthProvider>
+        {/* Auth-protected routes */}
+        <Route
+          path="/gallery"
+          element={
+            <ProtectedRoute>
+              <Gallery />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/folder/:folderId"
+          element={
+            <ProtectedRoute>
+              <FolderView />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/home" replace />} />
+      </Routes>
     </Router>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Sparkles } from 'lucide-react';
 import { Users } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth0Custom } from '../hooks/useAuth0';
 import { useFolders } from '../hooks/useFolders';
 import { FolderCard } from './FolderCard';
 import { FileCard } from './FileCard';
@@ -19,7 +19,7 @@ import type { FileData } from '../types';
 
 export const Gallery = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth0Custom();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

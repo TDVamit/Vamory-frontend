@@ -1,7 +1,7 @@
 import { useState, useRef} from 'react';
 import { Upload, X, FileText, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import api, {  API_BASE_URL } from '../services/api';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth0Custom } from '../hooks/useAuth0';
 import { UserRole } from '../types';
 import { ErrorModal } from './ErrorModal';
 
@@ -153,7 +153,7 @@ async function getPresignedUploadUrl(
 }
 
 export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: FileUploadProps) => {
-  const { user } = useAuth();
+  const { user } = useAuth0Custom();
   // Only allow admin, user, editor
   // Allow super_admin to upload files, just like admin and user
   const canUpload = user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user || user?.user_role === UserRole.editor;

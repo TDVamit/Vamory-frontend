@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown, DollarSign } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { User, LogOut, ChevronDown, DollarSign, Coins } from 'lucide-react';
+import { useAuth0Custom } from '../hooks/useAuth0';
 import { ProfileModal } from './ProfileModal';
 import { Link, useLocation } from 'react-router-dom';
 
 export const Header = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, auth0User, logout, isAuthenticated } = useAuth0Custom();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,7 +75,13 @@ export const Header = () => {
           </div>
 
           {/* Right side - Profile and logout */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
+            {isAuthenticated && user && (
+              <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-yellow-400/20">
+                <Coins className="w-4 h-4" />
+                <span className="text-sm font-medium">{user.credits || 0} Credits</span>
+              </div>
+            )}
             {isAuthenticated ? (
               <div className="relative" ref={menuRef}>
                 <button
@@ -83,16 +89,16 @@ export const Header = () => {
                   className="flex items-center gap-2 text-gray-300 bg-gray-800/20 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-600/20 hover:bg-gray-700/30 transition-colors"
                 >
                   <span className="flex items-center gap-2">
-                    {user?.profile_pic ? (
+                    {auth0User?.picture || user?.profile_pic_url ? (
                       <img
-                        src={user.profile_pic.startsWith('data:') ? user.profile_pic : `data:image/png;base64,${user.profile_pic}`}
+                        src={auth0User?.picture || user?.profile_pic_url}
                         alt="Profile"
                         className="w-7 h-7 rounded-full object-cover border border-gray-500 bg-gray-700"
                       />
                     ) : (
                       <User className="w-7 h-7 text-gray-400 rounded-full bg-gray-700 border border-gray-500" />
                     )}
-                    <span className="text-sm font-medium text-white ml-2">{user?.full_name}</span>
+                    <span className="text-sm font-medium text-white ml-2">{user?.full_name || auth0User?.name}</span>
                   </span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
                 </button>

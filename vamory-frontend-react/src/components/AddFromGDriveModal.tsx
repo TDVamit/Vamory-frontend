@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, FolderPlus, Link as LinkIcon } from 'lucide-react';
 import { filesAPI } from '../services/api';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth0Custom } from '../hooks/useAuth0';
 import type { AddFromGDriveRequest } from '../types';
 import { UserRole } from '../types';
 
@@ -12,7 +12,7 @@ interface AddFromGDriveModalProps {
 }
 
 export const AddFromGDriveModal = ({ isOpen, onClose, onSuccess }: AddFromGDriveModalProps) => {
-  const { user } = useAuth();
+  const { user } = useAuth0Custom();
   const canAddFromGDrive = user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user;
 
   const [formData, setFormData] = useState<AddFromGDriveRequest>({

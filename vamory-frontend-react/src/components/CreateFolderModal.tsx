@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, FolderPlus } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth0Custom } from '../hooks/useAuth0';
 import type { CreateFolderRequest } from '../types';
 import { UserRole } from '../types';
 
@@ -13,7 +13,7 @@ interface CreateFolderModalProps {
 }
 
 export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }: CreateFolderModalProps) => {
-  const { user } = useAuth();
+  const { user } = useAuth0Custom();
   const [formData, setFormData] = useState({
     name: '',
     storage_type: 'STANDARD_IA' as const,

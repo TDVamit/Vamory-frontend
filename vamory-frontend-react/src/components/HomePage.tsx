@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 
-import { Sparkles, Users, Archive, Cloud, Share2, FileCheck, Video, Database, Search, Info, X } from 'lucide-react';
+import { Sparkles, Users, Archive, Cloud, Share2, FileCheck, Video, Database, Search, Info, X, LogIn } from 'lucide-react';
 import { Header } from './Header';
+import { useAuth0Custom } from '../hooks/useAuth0';
 
 const HomePage: React.FC = () => {
+  const { isAuthenticated, login } = useAuth0Custom();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -506,6 +509,26 @@ const HomePage: React.FC = () => {
                       The next generation gallery
                     </span>
                    </p>
+                   
+                   {/* Call to Action Buttons */}
+                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                     {isAuthenticated ? (
+                       <Link
+                         to="/gallery"
+                         className="flex items-center gap-2 bg-white text-black px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+                       >
+                         <span>Go to Gallery</span>
+                       </Link>
+                     ) : (
+                       <button
+                         onClick={login}
+                         className="flex items-center gap-2 bg-white text-black px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+                       >
+                         <LogIn className="w-5 h-5" />
+                         <span>Get Started</span>
+                       </button>
+                     )}
+                   </div>
               </div>
            </div>
          </div>
