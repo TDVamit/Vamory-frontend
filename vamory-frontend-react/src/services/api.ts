@@ -23,7 +23,7 @@ import type {
   FileDownloadResponse
 } from '../types';
 
-export const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'https://api.vamory.vamitdamor.com';
+export const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'https://api.vamory.vadaevri.com';
 
 // Debug: Log the environment variable to verify it's working
 console.log('VITE_BACKEND_BASE_URL:', import.meta.env.VITE_BACKEND_BASE_URL);

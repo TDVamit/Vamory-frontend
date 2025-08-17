@@ -7,23 +7,28 @@ const PricingPage: React.FC = () => {
   const [standardGB, setStandardGB] = useState(0);
   const [archiveGB, setArchiveGB] = useState(0);
 
+  // Prevent scroll wheel from changing number input values
+  const preventScroll = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.preventDefault();
+  };
+
   
   // Calculate standard storage cost
   const calculateStandardCost = (gb: number) => {
     let totalCost = 0;
     let remainingGB = gb;
 
-    // First 10GB at $0.045/GB
+    // First 10GB at $0.035/GB
     if (remainingGB > 0) {
       const firstTier = Math.min(remainingGB, 10);
-      totalCost += firstTier * 0.045;
+      totalCost += firstTier * 0.035;
       remainingGB -= firstTier;
     }
 
-    // Next 20GB at $0.04/GB
+    // Next 20GB at $0.033/GB
     if (remainingGB > 0) {
       const secondTier = Math.min(remainingGB, 20);
-      totalCost += secondTier * 0.04;
+      totalCost += secondTier * 0.033;
       remainingGB -= secondTier;
     }
 
@@ -40,17 +45,17 @@ const PricingPage: React.FC = () => {
     let totalCost = 0;
     let remainingGB = gb;
 
-    // First 10GB at $0.0045/GB
+    // First 10GB at $0.0035/GB
     if (remainingGB > 0) {
       const firstTier = Math.min(remainingGB, 10);
-      totalCost += firstTier * 0.0045;
+      totalCost += firstTier * 0.0035;
       remainingGB -= firstTier;
     }
 
-    // Next 20GB at $0.004/GB
+    // Next 20GB at $0.0033/GB
     if (remainingGB > 0) {
       const secondTier = Math.min(remainingGB, 20);
-      totalCost += secondTier * 0.004;
+      totalCost += secondTier * 0.0033;
       remainingGB -= secondTier;
     }
 
@@ -107,6 +112,26 @@ const PricingPage: React.FC = () => {
         
         input[type="number"] {
           -moz-appearance: textfield;
+        }
+        
+        /* Disable scroll wheel on number inputs */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        /* Prevent scroll wheel from changing number input values */
+        input[type="number"]:focus {
+          outline: none;
+        }
+        
+        /* Disable scroll wheel events on number inputs */
+        input[type="number"] {
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
         }
       `}</style>
       <Header />
@@ -168,6 +193,7 @@ const PricingPage: React.FC = () => {
                       type="number"
                       value={standardGB === 0 ? '' : standardGB}
                       onChange={(e) => setStandardGB(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
+                      onWheel={preventScroll}
                       className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-white/40 transition-colors"
                       placeholder="Enter GB"
                       min="0"
@@ -176,7 +202,7 @@ const PricingPage: React.FC = () => {
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-white mb-1">
-                        ${standardCost.toFixed(2)}
+                        ${standardCost.toFixed(4)}
                       </div>
                       <div className="text-gray-400 text-sm">per month</div>
                     </div>
@@ -197,6 +223,7 @@ const PricingPage: React.FC = () => {
                       type="number"
                       value={archiveGB === 0 ? '' : archiveGB}
                       onChange={(e) => setArchiveGB(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
+                      onWheel={preventScroll}
                       className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-white/40 transition-colors"
                       placeholder="Enter GB"
                       min="0"
@@ -205,7 +232,7 @@ const PricingPage: React.FC = () => {
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-white mb-1">
-                        ${archiveCost.toFixed(3)}
+                        ${archiveCost.toFixed(4)}
                       </div>
                       <div className="text-gray-400 text-sm">per month</div>
                     </div>
@@ -241,21 +268,21 @@ const PricingPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-white mb-2">
-                      ${(standardCost + archiveCost).toFixed(2)}
-                    </div>
+                                         <div className="text-4xl font-bold text-white mb-2">
+                       ${(standardCost + archiveCost).toFixed(4)}
+                     </div>
                     <div className="text-gray-400">storage cost per month</div>
                   </div>
                   
                   {archiveGB > 0 && (
                     <div className="text-center">
                       <div className="text-sm text-gray-300 mb-2">If you retrieve 10% of archive data then:</div>
-                      <div className="text-lg font-semibold text-white mb-1">
-                        Retrieval cost: ${archiveRetrievalCost.toFixed(3)}
-                      </div>
-                      <div className="text-xl font-bold text-white">
-                        Total: ${totalCost.toFixed(2)}
-                      </div>
+                                             <div className="text-lg font-semibold text-white mb-1">
+                         Retrieval cost: ${archiveRetrievalCost.toFixed(4)}
+                       </div>
+                                             <div className="text-xl font-bold text-white">
+                         Total: ${totalCost.toFixed(4)}
+                       </div>
                     </div>
                   )}
                 </div>
@@ -270,45 +297,45 @@ const PricingPage: React.FC = () => {
                       <Zap className="w-4 h-4" />
                       Standard Storage
                     </h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">0-10GB</span>
-                        <span className="text-white">$0.045/GB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">10-30GB</span>
-                        <span className="text-white">$0.04/GB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">30GB+</span>
-                        <span className="text-white">$0.03/GB</span>
-                      </div>
-                    </div>
+                                         <div className="space-y-2 text-sm">
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">0-10GB</span>
+                         <span className="text-white">$0.035/GB</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">10-30GB</span>
+                         <span className="text-white">$0.033/GB</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">30GB+</span>
+                         <span className="text-white">$0.03/GB</span>
+                       </div>
+                     </div>
                   </div>
                   <div>
                     <h5 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                       <Archive className="w-4 h-4" />
                       Archive Storage
                     </h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">0-10GB</span>
-                        <span className="text-white">$0.0045/GB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">10-30GB</span>
-                        <span className="text-white">$0.004/GB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">30GB+</span>
-                        <span className="text-white">$0.003/GB</span>
-                      </div>
-                      <div className="border-t border-white/10 my-2"></div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Retrieval Cost</span>
-                        <span className="text-white">$0.0025/GB</span>
-                      </div>
-                    </div>
+                                         <div className="space-y-2 text-sm">
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">0-10GB</span>
+                         <span className="text-white">$0.0035/GB</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">10-30GB</span>
+                         <span className="text-white">$0.0033/GB</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">30GB+</span>
+                         <span className="text-white">$0.003/GB</span>
+                       </div>
+                       <div className="border-t border-white/10 my-2"></div>
+                       <div className="flex justify-between">
+                         <span className="text-gray-300">Retrieval Cost</span>
+                         <span className="text-white">$0.0025/GB</span>
+                       </div>
+                     </div>
                   </div>
                 </div>
               </div>

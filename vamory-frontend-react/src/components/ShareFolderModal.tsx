@@ -166,7 +166,7 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
     }
   };
 
-  const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'https://vamory.vamitdamor.com';
+  const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'https://vamory.vadaevri.com';
   const publicLink = publicToken ? `${frontendUrl}/shared/folder?token=${publicToken}&folder_id=${folder._id}` : '';
 
   return (
