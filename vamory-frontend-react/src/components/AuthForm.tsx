@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 
 export const AuthForm = () => {
   const navigate = useNavigate();

@@ -9,7 +9,7 @@ import { FileUpload } from './FileUpload';
 import { Header } from './Header';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MediaGallery } from './MediaGallery';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import type { Folder as FolderType, FileData } from '../types';
 import { ActionDropdown } from './ActionDropdown';

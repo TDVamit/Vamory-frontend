@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, FolderPlus, Link as LinkIcon } from 'lucide-react';
 import { filesAPI } from '../services/api';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 import type { AddFromGDriveRequest } from '../types';
 import { UserRole } from '../types';
 

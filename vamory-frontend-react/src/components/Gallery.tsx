@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Sparkles } from 'lucide-react';
 import { Users } from 'lucide-react';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 import { useFolders } from '../hooks/useFolders';
 import { FolderCard } from './FolderCard';
 import { FileCard } from './FileCard';

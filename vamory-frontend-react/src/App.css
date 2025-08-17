@@ -1,3 +1,11 @@
+/* Custom styles for image cropping */
+.crop-container img {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
 #root {
   margin: 0;
   padding: 0;

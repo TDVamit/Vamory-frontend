@@ -5,8 +5,16 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicFolderView } from './components/PublicFolderView';
 import HomePage from './components/HomePage';
 import PricingPage from './components/PricingPage';
-import { useAuth0Custom } from './hooks/useAuth0';
+import { AuthProvider, useAuth0Custom } from './contexts/AuthContext';
 import './App.css';
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
 
 // Component to handle root path redirect logic
 const RootRedirect = () => {
@@ -30,7 +38,7 @@ const RootRedirect = () => {
   }
 };
 
-function App() {
+const AppContent = () => {
   return (
     <Router>
       <Routes>
@@ -66,6 +74,6 @@ function App() {
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;

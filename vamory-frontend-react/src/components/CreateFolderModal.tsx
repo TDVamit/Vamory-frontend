@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, FolderPlus } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 import type { CreateFolderRequest } from '../types';
 import { UserRole } from '../types';
 

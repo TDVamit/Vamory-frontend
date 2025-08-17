@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ChevronDown, DollarSign, Coins } from 'lucide-react';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 import { ProfileModal } from './ProfileModal';
 import { Link, useLocation } from 'react-router-dom';
 
 export const Header = () => {
-  const { user, auth0User, logout, isAuthenticated } = useAuth0Custom();
+  const { user, auth0User, logout, isAuthenticated, login } = useAuth0Custom();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -89,9 +89,9 @@ export const Header = () => {
                   className="flex items-center gap-2 text-gray-300 bg-gray-800/20 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-600/20 hover:bg-gray-700/30 transition-colors"
                 >
                   <span className="flex items-center gap-2">
-                    {auth0User?.picture || user?.profile_pic_url ? (
+                    {user?.profile_pic_url || auth0User?.picture ? (
                       <img
-                        src={auth0User?.picture || user?.profile_pic_url}
+                        src={user?.profile_pic_url || auth0User?.picture}
                         alt="Profile"
                         className="w-7 h-7 rounded-full object-cover border border-gray-500 bg-gray-700"
                       />
@@ -122,13 +122,13 @@ export const Header = () => {
                 )}
               </div>
             ) : (
-              <Link
-                to="/login"
+              <button
+                onClick={login}
                 className="flex items-center gap-2 text-white bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors font-medium"
               >
                 <User className="w-4 h-4" />
                 Sign In
-              </Link>
+              </button>
             )}
           </div>
         </div>

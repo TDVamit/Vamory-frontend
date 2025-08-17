@@ -1,7 +1,7 @@
 import { useState, useRef} from 'react';
 import { Upload, X, FileText, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import api, {  API_BASE_URL } from '../services/api';
-import { useAuth0Custom } from '../hooks/useAuth0';
+import { useAuth0Custom } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { ErrorModal } from './ErrorModal';
 
