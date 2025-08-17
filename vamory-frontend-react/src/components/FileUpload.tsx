@@ -3,6 +3,22 @@ import { Upload, X, FileText, CheckCircle, AlertCircle, Plus } from 'lucide-reac
 import api, {  API_BASE_URL } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { UserRole } from '../types';
+import { ErrorModal } from './ErrorModal';
+
+// Allowed file extensions
+const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'];
+const ALLOWED_VIDEO_EXTENSIONS = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v'];
+
+// Helper function to get file extension
+const getFileExtension = (filename: string): string => {
+  return filename.split('.').pop()?.toLowerCase() || '';
+};
+
+// Helper function to check if file is allowed
+const isFileAllowed = (file: File): boolean => {
+  const extension = getFileExtension(file.name);
+  return ALLOWED_IMAGE_EXTENSIONS.includes(extension) || ALLOWED_VIDEO_EXTENSIONS.includes(extension);
+};
 
 interface FileUploadProps {
   folderId: string;
@@ -109,7 +125,7 @@ function uploadToS3WithProgress(
   });
 }
 
-// Helper: get presigned upload URL
+  // Helper: get presigned upload URL
 async function getPresignedUploadUrl(
   folderId: string,
   filename: string,
@@ -117,16 +133,23 @@ async function getPresignedUploadUrl(
   token: string,
   file_hash: string
 ): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/files/presign-upload?folder_id=${folderId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ folder_id: folderId, filename, content_type: contentType, file_hash }),
-  });
-  if (!res.ok) throw new Error('Failed to get presigned upload URL');
-  return await res.json();
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/files/presign-upload?folder_id=${folderId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ folder_id: folderId, filename, content_type: contentType, file_hash }),
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP ${res.status}: Failed to get presigned upload URL`);
+    }
+    return await res.json();
+  } catch (error: any) {
+    throw new Error(`Failed to get presigned upload URL: ${error.message}`);
+  }
 }
 
 export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: FileUploadProps) => {
@@ -139,6 +162,16 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
   const [error, setError] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [info, setInfo] = useState<string>('');
+  const [errorModal, setErrorModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+  }>({
+    isOpen: false,
+    title: 'Error',
+    message: '',
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllersRef = useRef<Set<AbortController>>(new Set());
 
@@ -153,16 +186,35 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
     e.preventDefault();
   };
 
+  // Helper function to show error modal
+  const showErrorModal = (title: string, message: string, details?: string) => {
+    setErrorModal({
+      isOpen: true,
+      title,
+      message,
+      details,
+    });
+  };
+
+  // Helper function to close error modal
+  const closeErrorModal = () => {
+    setErrorModal(prev => ({ ...prev, isOpen: false }));
+  };
+
   // File selection handler
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement> | { target: { files: FileList } }) => {
     setError('');
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    // Only allow images and videos
-    const allowed = files.filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    
+    // Check for allowed file extensions
+    const allowed = files.filter(isFileAllowed);
     if (allowed.length !== files.length) {
-      setError('Only images and videos can be uploaded.');
+      const rejectedFiles = files.filter(f => !isFileAllowed(f));
+      const rejectedExtensions = [...new Set(rejectedFiles.map(f => getFileExtension(f.name)))];
+      setError(`Only specific file types are allowed. Rejected extensions: ${rejectedExtensions.join(', ')}. Allowed: ${[...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_VIDEO_EXTENSIONS].join(', ')}`);
     }
+    
     // Filter out duplicates
     const existingNames = new Set(selectedFiles.map(f => f.file.name + f.file.size));
     const newFiles = allowed.filter(f => !existingNames.has(f.name + f.size));
@@ -216,7 +268,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
   // Upload handler
   const handleUpload = async () => {
     if (!folderId) {
-      setError('No folder selected. Please refresh and try again.');
+      showErrorModal('Upload Error', 'No folder selected. Please refresh and try again.');
       return;
     }
     setError('');
@@ -236,7 +288,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
           updatedFiles[i].status = 'error';
           updatedFiles[i].error = 'Failed to get upload URL from server.';
           setSelectedFiles([...updatedFiles]);
-          setError('Failed to get upload URL from server.');
+          showErrorModal('Upload Error', 'Failed to get upload URL from server.', 'The server could not generate a secure upload URL for this file.');
           continue;
         }
         let skipS3 = false;
@@ -277,7 +329,15 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
         updatedFiles[i].status = 'error';
         updatedFiles[i].error = err?.message || 'Upload failed';
         setSelectedFiles([...updatedFiles]);
-        setError('One or more files failed to upload.');
+        
+        // Show detailed error in modal
+        const errorMessage = err?.message || 'Upload failed';
+        const errorDetails = err?.response?.data?.detail || err?.stack || 'No additional details available';
+        showErrorModal(
+          'Upload Failed', 
+          `Failed to upload "${updatedFiles[i].file.name}". ${errorMessage}`,
+          errorDetails
+        );
       }
     }
     setIsUploading(false);
@@ -296,8 +356,9 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
   if (!isOpen || !canUpload) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="glass bg-black/40 rounded-xl p-8 w-full max-w-2xl mx-4 border border-gray-700/40">
+    <>
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+        <div className="glass bg-black/40 rounded-xl p-8 w-full max-w-2xl mx-4 border border-gray-700/40">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-black/30 rounded-lg border border-gray-700/30">
@@ -344,7 +405,7 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
             multiple
             onChange={handleFileSelect}
             className="hidden"
-            accept="image/*,video/*"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv,.m4v"
           />
           {selectedFiles.length === 0 ? (
             <div className="space-y-4">
@@ -352,6 +413,9 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
               <div>
                 <p className="text-white font-medium">Click to upload or drag and drop</p>
                 <p className="text-gray-400 text-sm mt-1">Multiple files supported</p>
+                <p className="text-gray-500 text-xs mt-2">
+                  Allowed: {[...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_VIDEO_EXTENSIONS].join(', ')}
+                </p>
               </div>
               <button
                 type="button"
@@ -448,8 +512,18 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
               </>
             )}
           </button>
-        </div>
-      </div>
-    </div>
+                 </div>
+       </div>
+     </div>
+     
+     {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        onClose={closeErrorModal}
+        title={errorModal.title}
+        message={errorModal.message}
+        details={errorModal.details}
+      />
+    </>
   );
 };

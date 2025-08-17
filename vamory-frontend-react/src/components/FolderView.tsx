@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Plus, Upload as UploadIcon, Home, ChevronRight, File, Download, Trash2, CheckSquare, Square, Folder as FolderIcon, Sparkles, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Upload as UploadIcon, Home, ChevronRight, File, Download, Trash2, CheckSquare, Square, Folder as FolderIcon, Sparkles } from 'lucide-react';
 import { foldersAPI, filesAPI, aiSearchAPI } from '../services/api';
 import { FolderCard } from './FolderCard';
 import { FileCard } from './FileCard';
@@ -49,7 +49,6 @@ export const FolderView = () => {
   const [isAISearchEnabled, setIsAISearchEnabled] = useState(true); // Default to enabled
   const [aiSearchResults, setAiSearchResults] = useState<{ categories: Record<string, FileData[]> } | null>(null);
   const [isAISearchLoading, setIsAISearchLoading] = useState(false);
-  const [isAIReloading, setIsAIReloading] = useState(false);
   const [showAISearchGallery, setShowAISearchGallery] = useState(false);
   const [aiSearchGalleryIndex, setAiSearchGalleryIndex] = useState(0);
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
@@ -263,12 +262,6 @@ export const FolderView = () => {
 
   const handleUploadSuccess = async () => {
     handleRefresh();
-    // Reload AI search index after upload
-    try {
-      await aiSearchAPI.reload();
-    } catch (error) {
-      console.error('AI reload failed after upload:', error);
-    }
   };
 
   const handleSearch = (query: string) => {
@@ -398,22 +391,7 @@ export const FolderView = () => {
     setAiSearchGalleryIndex(index);
   };
 
-  // AI Search Reload function
-  const handleAIReload = async () => {
-    setIsAIReloading(true);
-    try {
-      await aiSearchAPI.reload();
-      // If there's a current search query, re-run the search
-      if (searchQuery.trim()) {
-        const results = await aiSearchAPI.search(searchQuery, folderId);
-        setAiSearchResults(results);
-      }
-    } catch (error) {
-      console.error('AI reload failed:', error);
-    } finally {
-      setIsAIReloading(false);
-    }
-  };
+
 
   const handleBackToGallery = () => {
     navigate('/');
@@ -731,27 +709,14 @@ export const FolderView = () => {
           
           {aiSearchResults && !isAISearchLoading && (
             <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white mb-0">
-                    AI Search Results
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Powered by AI</span>
-                  </div>
+              <div className="flex items-center gap-2 mb-6">
+                <h3 className="text-lg font-semibold text-white mb-0">
+                  AI Search Results
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Powered by AI</span>
                 </div>
-                <button
-                  onClick={handleAIReload}
-                  disabled={isAIReloading}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 bg-gray-800/20 text-gray-300 border border-gray-600/30 hover:bg-gray-700/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Reload AI Search Index"
-                >
-                  <RotateCcw className={`w-4 h-4 ${isAIReloading ? 'animate-spin' : ''}`} />
-                  <span className="text-sm font-medium">
-                    {isAIReloading ? 'Reloading...' : 'Reload'}
-                  </span>
-                </button>
               </div>
               {Object.entries(aiSearchResults.categories).map(([category, files]) => (
                 <div key={category} className="mb-8">

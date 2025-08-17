@@ -7,6 +7,7 @@ import { EditFolderModal } from './EditFolderModal';
 import { StorageConversionModal } from './StorageConversionModal';
 import { ShareFolderModal } from './ShareFolderModal';
 import { ConversionStatusModal } from './ConversionStatusModal';
+import { ErrorModal } from './ErrorModal';
 import type { Folder as FolderType } from '../types';
 import type { FileData } from '../types';
 
@@ -30,6 +31,16 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile, isP
   const [showConversionStatusModal, setShowConversionStatusModal] = useState(false);
   const [_dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number}>({top: 0, left: 0});
+  const [errorModal, setErrorModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+  }>({
+    isOpen: false,
+    title: 'Error',
+    message: '',
+  });
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   
@@ -95,9 +106,19 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile, isP
   // Show error if deletion fails
   useEffect(() => {
     if (error) {
-      alert(`Error: ${error}`);
+      setErrorModal({
+        isOpen: true,
+        title: 'Delete Failed',
+        message: `Failed to delete folder "${folder.name}". ${error}`,
+        details: error,
+      });
     }
-  }, [error]);
+  }, [error, folder.name]);
+
+  // Helper function to close error modal
+  const closeErrorModal = () => {
+    setErrorModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -609,6 +630,15 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile, isP
         folder={folder}
         onClose={() => setShowConversionStatusModal(false)}
         onStatusChecked={handleConversionStatusChecked}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        onClose={closeErrorModal}
+        title={errorModal.title}
+        message={errorModal.message}
+        details={errorModal.details}
       />
     </>
   )

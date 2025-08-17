@@ -247,7 +247,7 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileD
     if (isPublic && currentFile) {
       // Use public /public/download endpoint for download
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000'}/api/v1/files/${currentFile._id}/public/download`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://api.vamory.vadaevri.com'}/api/v1/files/${currentFile._id}/public/download`);
         const data = await response.json();
         const downloadUrl = data.download_url;
         const filename = data.filename || currentFile.filename || currentFile.original_filename || currentFile._id;

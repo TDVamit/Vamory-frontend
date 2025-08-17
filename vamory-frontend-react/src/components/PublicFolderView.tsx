@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search,  File, CheckSquare, Square, Folder as FolderIcon, Plus, Download, AlertTriangle, Sparkles, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Search,  File, CheckSquare, Square, Folder as FolderIcon, Plus, Download, AlertTriangle, Sparkles } from 'lucide-react';
 import { publicFoldersAPI, aiSearchAPI } from '../services/api';
 import { AISearchToggle } from './AISearchToggle';
 import { FolderCard } from './FolderCard';
@@ -54,7 +54,6 @@ export const PublicFolderView = () => {
   const [isAISearchEnabled, setIsAISearchEnabled] = useState(true); // Default to enabled
   const [aiSearchResults, setAiSearchResults] = useState<{ categories: Record<string, FileData[]> } | null>(null);
   const [isAISearchLoading, setIsAISearchLoading] = useState(false);
-  const [isAIReloading, setIsAIReloading] = useState(false);
   const [showAISearchGallery, setShowAISearchGallery] = useState(false);
   const [aiSearchGalleryIndex, setAiSearchGalleryIndex] = useState(0);
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
@@ -371,22 +370,7 @@ export const PublicFolderView = () => {
     setAiSearchGalleryIndex(index);
   };
 
-  // AI Search Reload function
-  const handleAIReload = async () => {
-    setIsAIReloading(true);
-    try {
-      await aiSearchAPI.reload();
-      // If there's a current search query, re-run the search
-      if (searchQuery.trim()) {
-        const results = await aiSearchAPI.search(searchQuery, folderId);
-        setAiSearchResults(results);
-      }
-    } catch (error) {
-      console.error('AI reload failed:', error);
-    } finally {
-      setIsAIReloading(false);
-    }
-  };
+
   const truncateName = (name: string | undefined | null, maxLength = 12) =>
     typeof name === 'string' ? (name.length > maxLength ? name.slice(0, maxLength - 1) + '…' : name) : '';
 
@@ -395,7 +379,7 @@ export const PublicFolderView = () => {
     const selectedFileData = files.filter(f => selectedFiles.has(f._id));
     for (const file of selectedFileData) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000'}/api/v1/files/${file._id}/public/download`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://api.vamory.vadaevri.com'}/api/v1/files/${file._id}/public/download`);
         const data = await response.json();
         const downloadUrl = data.download_url;
         const filename = data.filename || file.filename || file.original_filename || file._id;
@@ -419,7 +403,7 @@ export const PublicFolderView = () => {
   // For single file download, pass a download handler to FileCard
   const handleSingleDownload = async (file: FileData) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000'}/api/v1/files/${file._id}/public/download`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://api.vamory.vadaevri.com'}/api/v1/files/${file._id}/public/download`);
       const data = await response.json();
       const downloadUrl = data.download_url;
       const filename = data.filename || file.filename || file.original_filename || file._id;
@@ -570,27 +554,14 @@ export const PublicFolderView = () => {
           
           {aiSearchResults && !isAISearchLoading && (
             <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white mb-0">
-                    AI Search Results
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Powered by AI</span>
-                  </div>
+              <div className="flex items-center gap-2 mb-6">
+                <h3 className="text-lg font-semibold text-white mb-0">
+                  AI Search Results
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Powered by AI</span>
                 </div>
-                <button
-                  onClick={handleAIReload}
-                  disabled={isAIReloading}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 bg-gray-800/20 text-gray-300 border border-gray-600/30 hover:bg-gray-700/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Reload AI Search Index"
-                >
-                  <RotateCcw className={`w-4 h-4 ${isAIReloading ? 'animate-spin' : ''}`} />
-                  <span className="text-sm font-medium">
-                    {isAIReloading ? 'Reloading...' : 'Reload'}
-                  </span>
-                </button>
               </div>
               {Object.entries(aiSearchResults.categories).map(([category, files]) => (
                 <div key={category} className="mb-8">
