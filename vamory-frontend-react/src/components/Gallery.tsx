@@ -20,6 +20,7 @@ import type { FileData } from '../types';
 export const Gallery = () => {
   const navigate = useNavigate();
   const { user } = useAuth0Custom();
+  const hasZeroCredits = Boolean(user && user.credits === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -459,11 +460,13 @@ export const Gallery = () => {
                         label: 'Create Folder',
                         onClick: () => setIsCreateModalOpen(true),
                         icon: <Plus size={16} />,
+                        disabled: hasZeroCredits,
                       },
                       {
                         label: 'Add from Google Drive',
                         onClick: () => setIsAddFromGDriveOpen(true),
                         icon: <Plus size={16} />,
+                        disabled: hasZeroCredits,
                       },
                     ]}
                   />

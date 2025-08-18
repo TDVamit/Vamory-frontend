@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { Sparkles, Users, Archive, Cloud, Share2, FileCheck, Video, Database, Search, Info, X } from 'lucide-react';
 import { Header } from './Header';
+import Footer from './Footer';
 
 const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -1250,9 +1251,9 @@ const HomePage: React.FC = () => {
                ))}
              </div>
            </div>
-         </section>
+                 </section>
 
-             
+      <Footer />
     </div>
   );
 };

@@ -14,6 +14,7 @@ interface CreateFolderModalProps {
 
 export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }: CreateFolderModalProps) => {
   const { user } = useAuth0Custom();
+  const hasZeroCredits = user && user.credits === 0;
   const [formData, setFormData] = useState({
     name: '',
     storage_type: 'STANDARD_IA' as const,
@@ -32,8 +33,8 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
     }
   }, [isOpen]);
 
-  // Allow super_admin to have all admin privileges
-  const canCreateFolder = user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user;
+  // Allow super_admin to have all admin privileges and check credits
+  const canCreateFolder = (user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user) && !hasZeroCredits;
   // Don't render modal if not allowed
   if (!isOpen || !canCreateFolder) return null;
 

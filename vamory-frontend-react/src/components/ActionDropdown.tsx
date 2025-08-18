@@ -5,6 +5,7 @@ interface ActionDropdownOption {
   label: string;
   onClick: () => void;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 interface ActionDropdownProps {
@@ -53,10 +54,17 @@ export const ActionDropdown = ({ options, className = '' }: ActionDropdownProps)
             <button
               key={opt.label}
               onClick={() => {
-                setOpen(false);
-                opt.onClick();
+                if (!opt.disabled) {
+                  setOpen(false);
+                  opt.onClick();
+                }
               }}
-              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-white flex items-center gap-2 transition-colors"
+              disabled={opt.disabled}
+              className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                opt.disabled 
+                  ? 'text-gray-500 cursor-not-allowed' 
+                  : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
+              }`}
               type="button"
             >
               {opt.icon}

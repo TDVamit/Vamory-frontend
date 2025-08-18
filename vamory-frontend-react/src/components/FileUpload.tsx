@@ -154,9 +154,10 @@ async function getPresignedUploadUrl(
 
 export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: FileUploadProps) => {
   const { user } = useAuth0Custom();
-  // Only allow admin, user, editor
+  const hasZeroCredits = user && user.credits === 0;
+  // Only allow admin, user, editor and check credits
   // Allow super_admin to upload files, just like admin and user
-  const canUpload = user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user || user?.user_role === UserRole.editor;
+  const canUpload = (user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user || user?.user_role === UserRole.editor) && !hasZeroCredits;
   // State for file selection, upload, and error
   const [selectedFiles, setSelectedFiles] = useState<UploadingFile[]>([]);
   const [error, setError] = useState<string>('');

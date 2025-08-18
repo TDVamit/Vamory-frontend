@@ -5,6 +5,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicFolderView } from './components/PublicFolderView';
 import HomePage from './components/HomePage';
 import PricingPage from './components/PricingPage';
+import ContactPage from './components/ContactPage';
+import FAQPage from './components/FAQPage';
 import { AuthProvider, useAuth0Custom } from './contexts/AuthContext';
 import './App.css';
 
@@ -48,6 +50,8 @@ const AppContent = () => {
         {/* Public routes */}
         <Route path="/home" element={<HomePage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/faq" element={<FAQPage />} />
         
         {/* Shared folder browsing routes (public, not wrapped in ProtectedRoute) */}
         <Route path="/shared/folder" element={<PublicFolderView />} />

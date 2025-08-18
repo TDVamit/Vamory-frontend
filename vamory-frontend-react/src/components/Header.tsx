@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown, DollarSign, Coins } from 'lucide-react';
+import { User, LogOut, ChevronDown, DollarSign, Coins, Info } from 'lucide-react';
 import { useAuth0Custom } from '../contexts/AuthContext';
 import { ProfileModal } from './ProfileModal';
 import { Link, useLocation } from 'react-router-dom';
@@ -8,25 +8,32 @@ export const Header = () => {
   const { user, auth0User, logout, isAuthenticated, login } = useAuth0Custom();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showCreditWarning, setShowCreditWarning] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const creditWarningRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  
+  const hasZeroCredits = user && user.credits === 0;
 
-  // Handle click outside to close menu
+  // Handle click outside to close menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
       }
+      if (creditWarningRef.current && !creditWarningRef.current.contains(event.target as Node)) {
+        setShowCreditWarning(false);
+      }
     };
 
-    if (showProfileMenu) {
+    if (showProfileMenu || showCreditWarning) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showProfileMenu]);
+  }, [showProfileMenu, showCreditWarning]);
 
   const handleLogout = async () => {
     try {
@@ -77,9 +84,39 @@ export const Header = () => {
           {/* Right side - Profile and logout */}
           <div className="flex items-center gap-4">
             {isAuthenticated && user && (
-              <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-yellow-400/20">
-                <Coins className="w-4 h-4" />
-                <span className="text-sm font-medium">{user.credits || 0} Credits</span>
+              <div className="relative" ref={creditWarningRef}>
+                <div className={`flex items-center gap-2 backdrop-blur-sm px-3 py-2 rounded-lg border ${
+                  hasZeroCredits 
+                    ? 'text-red-400 bg-red-400/10 border-red-400/20' 
+                    : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'
+                }`}>
+                  <Coins className="w-4 h-4" />
+                  <span className="text-sm font-medium">{user.credits || 0} Credits</span>
+                  {hasZeroCredits && (
+                    <button
+                      onClick={() => setShowCreditWarning(!showCreditWarning)}
+                      className="ml-1 hover:opacity-80 transition-opacity"
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {hasZeroCredits && showCreditWarning && (
+                  <div className="absolute right-0 top-12 bg-black/90 backdrop-blur-md rounded-lg shadow-lg border border-red-400/30 p-4 min-w-[280px] z-50">
+                    <div className="text-red-400 font-semibold mb-2">No Credits Left!</div>
+                    <div className="text-gray-300 text-sm leading-relaxed">
+                      Your data will be deleted in 2 months if no credits are added. 
+                      Upload and create folder functions are disabled until you add more credits.
+                    </div>
+                    <Link 
+                      to="/pricing" 
+                      className="inline-block mt-3 text-blue-400 hover:text-blue-300 text-sm font-medium"
+                      onClick={() => setShowCreditWarning(false)}
+                    >
+                      Add Credits →
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
             {isAuthenticated ? (

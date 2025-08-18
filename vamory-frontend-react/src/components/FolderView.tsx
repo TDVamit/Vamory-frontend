@@ -18,6 +18,8 @@ import { AISearchToggle } from './AISearchToggle';
 export const FolderView = () => {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth0Custom();
+  const hasZeroCredits = user && user.credits === 0;
   const [currentFolder, setCurrentFolder] = useState<FolderType | null>(null);
   const [subfolders, setSubfolders] = useState<FolderType[]>([]);
   const [files, setFiles] = useState<FileData[]>([]);
@@ -87,10 +89,9 @@ export const FolderView = () => {
     }
   };
 
-  const { user } = useAuth0Custom();
   const userRole = user?.user_role;
-  const canCreateFolder = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user;
-  const canUpload = userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user || userRole === UserRole.editor;
+  const canCreateFolder = (userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user) && !hasZeroCredits;
+  const canUpload = (userRole === UserRole.super_admin || userRole === UserRole.admin || userRole === UserRole.user || userRole === UserRole.editor) && !hasZeroCredits;
 
   useEffect(() => {
     if (folderId) {

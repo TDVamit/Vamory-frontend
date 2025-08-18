@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {  ArrowLeft, Archive, Clock, DollarSign, Zap, Calculator } from 'lucide-react';
 import { Header } from './Header';
+import Footer from './Footer';
 
 const PricingPage: React.FC = () => {
   const [standardGB, setStandardGB] = useState(0);
@@ -383,6 +384,8 @@ const PricingPage: React.FC = () => {
           </div>
         </div>
       </section>
+      
+      <Footer />
     </div>
   );
 };
