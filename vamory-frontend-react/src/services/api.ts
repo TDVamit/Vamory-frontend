@@ -15,7 +15,8 @@ import type {
   PaginatedResponse,
   AddFromGDriveRequest,
   AddFromGDriveResponse,
-  FileDownloadResponse
+  FileDownloadResponse,
+  ExchangeRateResponse
 } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'https://api.vamory.vadaevri.com';
@@ -414,6 +415,19 @@ export const publicFoldersAPI = {
   getPublicFileById: async (fileId: string, publicToken: string): Promise<FileData> => {
     const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/file`, {
       params: { token: publicToken, file_id: fileId },
+    });
+    return response.data;
+  },
+};
+
+// Currency conversion API
+export const currencyAPI = {
+  /**
+   * Get exchange rate for currency conversion
+   */
+  getExchangeRate: async (base: string, target: string, amount: number): Promise<ExchangeRateResponse> => {
+    const response = await api.get('/api/v1/credit/exchange-rate', {
+      params: { base, target, amount }
     });
     return response.data;
   },

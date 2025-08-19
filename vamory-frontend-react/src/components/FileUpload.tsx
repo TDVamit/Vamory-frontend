@@ -92,16 +92,18 @@ function uploadToS3WithProgress(
   file: File,
   onProgress: (progress: number) => void,
   signal: AbortSignal,
-  storageClass?: string
+  storageClass?: string,
+  contentType?: string
 ): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', file.type);
+    
+    const finalContentType = contentType || file.type;
+    xhr.setRequestHeader('Content-Type', finalContentType);
     if (storageClass) {
       xhr.setRequestHeader('x-amz-storage-class', storageClass);
     }
-    xhr.setRequestHeader('x-amz-acl', 'private');
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -111,7 +113,7 @@ function uploadToS3WithProgress(
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(true);
       } else {
-        reject(new Error('S3 upload failed'));
+        reject(new Error(`S3 upload failed: ${xhr.status} ${xhr.statusText} - ${xhr.responseText}`));
       }
     };
     xhr.onerror = () => reject(new Error('S3 upload failed'));
@@ -281,10 +283,10 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
       if (updatedFiles[i].status === 'completed') continue;
       updatedFiles[i].status = 'uploading';
       setSelectedFiles([...updatedFiles]);
-      try {
-        const file = updatedFiles[i].file;
-        const file_hash = await calculateFileHash(file);
-        const presign = await getPresignedUploadUrl(folderId, file.name, file.type, token, file_hash);
+              try {
+          const file = updatedFiles[i].file;
+          const file_hash = await calculateFileHash(file);
+          const presign = await getPresignedUploadUrl(folderId, file.name, file.type, token, file_hash);
         if (!presign.url && !presign.already_uploaded) {
           updatedFiles[i].status = 'error';
           updatedFiles[i].error = 'Failed to get upload URL from server.';
@@ -308,18 +310,20 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
               setSelectedFiles([...updatedFiles]);
             },
             controller.signal,
-            presign.storage_class
+            presign.storage_class,
+            presign.content_type
           );
           abortControllersRef.current.delete(controller);
         }
-        const completeResp = await completeUpload({
-          s3_key: presign.s3_key,
-          filename: file.name,
-          folder_id: folderId,
-          content_type: file.type,
-          file_size: file.size,
-          file_hash,
-        }, token);
+                 const completeParams = {
+            s3_key: presign.s3_key,
+            filename: file.name,
+            folder_id: folderId,
+            content_type: file.type,
+            file_size: file.size,
+            file_hash,
+          };
+          const completeResp = await completeUpload(completeParams, token);
         if (completeResp?.already_uploaded) {
           setInfo(`File "${file.name}" was already uploaded.`);
         }
@@ -332,9 +336,9 @@ export const FileUpload = ({ folderId, onSuccess, onClose, isOpen = true }: File
         setSelectedFiles([...updatedFiles]);
         
         // Show detailed error in modal
-        const errorMessage = err?.message || 'Upload failed';
-        const errorDetails = err?.response?.data?.detail || err?.stack || 'No additional details available';
-        showErrorModal(
+                  const errorMessage = err?.message || 'Upload failed';
+          const errorDetails = err?.response?.data?.detail || err?.stack || 'No additional details available';
+          showErrorModal(
           'Upload Failed', 
           `Failed to upload "${updatedFiles[i].file.name}". ${errorMessage}`,
           errorDetails

@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {  ArrowLeft, Archive, Clock, DollarSign, Zap, Calculator } from 'lucide-react';
+import {  ArrowLeft, Archive, Clock, DollarSign, Zap, Calculator, Globe, ChevronDown } from 'lucide-react';
 import { Header } from './Header';
 import Footer from './Footer';
+import { useCurrency } from '../hooks/useCurrency';
 
 const PricingPage: React.FC = () => {
   const [standardGB, setStandardGB] = useState(0);
   const [archiveGB, setArchiveGB] = useState(0);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
+
+  const {
+    selectedCurrency,
+    setSelectedCurrency,
+    locationData,
+    exchangeRate,
+    loading,
+    error,
+    convertCurrency,
+    getFormattedPrice,
+    getCurrencyOptions,
+    currencies
+  } = useCurrency();
 
   // Prevent scroll wheel from changing number input values
   const preventScroll = (e: React.WheelEvent<HTMLInputElement>) => {
     e.preventDefault();
   };
 
-  
   // Calculate standard storage cost
   const calculateStandardCost = (gb: number) => {
     let totalCost = 0;
@@ -72,6 +87,49 @@ const PricingPage: React.FC = () => {
   const archiveCost = calculateArchiveCost(archiveGB);
   const archiveRetrievalCost = archiveGB * 0.1 * 0.0025; // 10% of archive GB * $0.0025/GB
   const totalCost = standardCost + archiveCost + archiveRetrievalCost;
+
+  // Convert currency when currency changes or when user enters values
+  useEffect(() => {
+    if (selectedCurrency !== 'usd' && !exchangeRate && !loading) {
+      // Convert a sample amount to get the exchange rate
+      convertCurrency(1);
+    }
+  }, [selectedCurrency, exchangeRate, loading]);
+
+  // Handle currency selection
+  const handleCurrencyChange = (currencyCode: string) => {
+    setSelectedCurrency(currencyCode);
+    setShowCurrencyDropdown(false);
+    setCurrencySearch('');
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.currency-dropdown')) {
+        setShowCurrencyDropdown(false);
+        setCurrencySearch('');
+      }
+    };
+
+    if (showCurrencyDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCurrencyDropdown]);
+
+  const currencyOptions = getCurrencyOptions();
+  const currentCurrencyInfo = currencies[selectedCurrency];
+  
+  // Filter currencies based on search
+  const filteredCurrencyOptions = currencyOptions.filter(option =>
+    option.label.toLowerCase().includes(currencySearch.toLowerCase()) ||
+    option.value.toLowerCase().includes(currencySearch.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -172,14 +230,84 @@ const PricingPage: React.FC = () => {
 
           <div className="max-w-6xl mx-auto">
             <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-lg shadow-black/20">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                  <Calculator className="w-6 h-6 text-white" />
+              {/* Currency Selector */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                    <Calculator className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white">Storage Cost Calculator</h3>
                 </div>
-                <h3 className="text-xl font-semibold text-white">Storage Cost Calculator</h3>
+                
+                {/* Currency Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                    className="currency-dropdown flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors"
+                  >
+                    <span>{currentCurrencyInfo?.symbol} {currentCurrencyInfo?.name}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  
+                  {showCurrencyDropdown && (
+                    <div className="currency-dropdown absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-black/90 backdrop-blur-md border border-white/30 rounded-lg shadow-lg z-50">
+                      <div className="p-2">
+                        <input
+                          type="text"
+                          placeholder="Search currencies..."
+                          value={currencySearch}
+                          onChange={(e) => setCurrencySearch(e.target.value)}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-gray-400 mb-2"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') setShowCurrencyDropdown(false);
+                          }}
+                        />
+                        <div className="space-y-1 max-h-80 overflow-y-auto">
+                          {filteredCurrencyOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => handleCurrencyChange(option.value)}
+                              className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                                selectedCurrency === option.value
+                                  ? 'bg-white/20 text-white'
+                                  : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Location Detection Info */}
+              {locationData && (
+                <div className="mb-6 p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-gray-300">
+                    <Globe className="w-4 h-4" />
+                    <span>
+                      Detected location: {locationData.country_name} 
+                      {locationData.currency && currencies[locationData.currency.toLowerCase()] && (
+                        <span className="ml-2">
+                          (Currency: {currencies[locationData.currency.toLowerCase()].symbol} {currencies[locationData.currency.toLowerCase()].name})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-lg">
+                  <p className="text-red-300 text-sm">{error}</p>
+                </div>
+              )}
               
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Standard Storage Input */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-4">
@@ -203,7 +331,13 @@ const PricingPage: React.FC = () => {
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-white mb-1">
-                        ${standardCost.toFixed(4)}
+                        {loading ? (
+                          <span className="text-gray-400">Loading...</span>
+                        ) : standardCost > 0 ? (
+                          getFormattedPrice(standardCost)
+                        ) : (
+                          `${currentCurrencyInfo?.symbol || '$'}0.0000`
+                        )}
                       </div>
                       <div className="text-gray-400 text-sm">per month</div>
                     </div>
@@ -233,7 +367,13 @@ const PricingPage: React.FC = () => {
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-white mb-1">
-                        ${archiveCost.toFixed(4)}
+                        {loading ? (
+                          <span className="text-gray-400">Loading...</span>
+                        ) : archiveCost > 0 ? (
+                          getFormattedPrice(archiveCost)
+                        ) : (
+                          `${currentCurrencyInfo?.symbol || '$'}0.0000`
+                        )}
                       </div>
                       <div className="text-gray-400 text-sm">per month</div>
                     </div>
@@ -269,21 +409,35 @@ const PricingPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="text-center">
-                                         <div className="text-4xl font-bold text-white mb-2">
-                       ${(standardCost + archiveCost).toFixed(4)}
-                     </div>
+                    <div className="text-4xl font-bold text-white mb-2">
+                      {loading ? (
+                        <span className="text-gray-400">Loading...</span>
+                      ) : (standardCost + archiveCost) > 0 ? (
+                        getFormattedPrice(standardCost + archiveCost)
+                      ) : (
+                        `${currentCurrencyInfo?.symbol || '$'}0.0000`
+                      )}
+                    </div>
                     <div className="text-gray-400">storage cost per month</div>
                   </div>
                   
                   {archiveGB > 0 && (
                     <div className="text-center">
                       <div className="text-sm text-gray-300 mb-2">If you retrieve 10% of archive data then:</div>
-                                             <div className="text-lg font-semibold text-white mb-1">
-                         Retrieval cost: ${archiveRetrievalCost.toFixed(4)}
-                       </div>
-                                             <div className="text-xl font-bold text-white">
-                         Total: ${totalCost.toFixed(4)}
-                       </div>
+                      <div className="text-lg font-semibold text-white mb-1">
+                        Retrieval cost: {loading ? (
+                          <span className="text-gray-400">Loading...</span>
+                        ) : (
+                          getFormattedPrice(archiveRetrievalCost)
+                        )}
+                      </div>
+                      <div className="text-xl font-bold text-white">
+                        Total: {loading ? (
+                          <span className="text-gray-400">Loading...</span>
+                        ) : (
+                          getFormattedPrice(totalCost)
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -301,15 +455,27 @@ const PricingPage: React.FC = () => {
                                          <div className="space-y-2 text-sm">
                        <div className="flex justify-between">
                          <span className="text-gray-300">0-10GB</span>
-                         <span className="text-white">$0.035/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.035' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.035 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.035`}/GB
+                         </span>
                        </div>
                        <div className="flex justify-between">
                          <span className="text-gray-300">10-30GB</span>
-                         <span className="text-white">$0.033/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.033' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.033 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.033`}/GB
+                         </span>
                        </div>
                        <div className="flex justify-between">
                          <span className="text-gray-300">30GB+</span>
-                         <span className="text-white">$0.03/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.03' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.03 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.03`}/GB
+                         </span>
                        </div>
                      </div>
                   </div>
@@ -321,20 +487,36 @@ const PricingPage: React.FC = () => {
                                          <div className="space-y-2 text-sm">
                        <div className="flex justify-between">
                          <span className="text-gray-300">0-10GB</span>
-                         <span className="text-white">$0.0035/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.0035' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.0035 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.0035`}/GB
+                         </span>
                        </div>
                        <div className="flex justify-between">
                          <span className="text-gray-300">10-30GB</span>
-                         <span className="text-white">$0.0033/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.0033' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.0033 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.0033`}/GB
+                         </span>
                        </div>
                        <div className="flex justify-between">
                          <span className="text-gray-300">30GB+</span>
-                         <span className="text-white">$0.003/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.003' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.003 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.003`}/GB
+                         </span>
                        </div>
                        <div className="border-t border-white/10 my-2"></div>
                        <div className="flex justify-between">
                          <span className="text-gray-300">Retrieval Cost</span>
-                         <span className="text-white">$0.0025/GB</span>
+                         <span className="text-white">
+                           {selectedCurrency === 'usd' ? '$0.0025' : 
+                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.0025 * exchangeRate.rate).toFixed(4)}` : 
+                             `${currentCurrencyInfo?.symbol || '$'}0.0025`}/GB
+                         </span>
                        </div>
                      </div>
                   </div>
@@ -344,10 +526,6 @@ const PricingPage: React.FC = () => {
           </div>
         </div>
       </section>
-
-      
-
-
 
       {/* Credit System Section */}
       <section className="py-16 bg-black grid-background">

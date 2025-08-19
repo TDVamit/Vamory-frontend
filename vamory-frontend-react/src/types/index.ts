@@ -233,3 +233,29 @@ export interface FileDownloadResponse {
   download_url: string;
   filename: string;
 }
+
+// Currency conversion types
+export interface CurrencyInfo {
+  name: string;
+  symbol: string;
+}
+
+export interface ExchangeRateResponse {
+  base_currency: string;
+  target_currency: string;
+  amount: number;
+  converted_amount: number;
+  rate: number;
+  base_currency_info: CurrencyInfo;
+  target_currency_info: CurrencyInfo;
+}
+
+export interface CurrencyData {
+  [currencyCode: string]: CurrencyInfo;
+}
+
+export interface LocationData {
+  country_code?: string;
+  currency?: string;
+  country_name?: string;
+}

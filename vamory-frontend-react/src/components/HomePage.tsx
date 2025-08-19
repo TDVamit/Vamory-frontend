@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-import { Sparkles, Users, Archive, Cloud, Share2, FileCheck, Video, Database, Search, Info, X } from 'lucide-react';
+import { Sparkles, Users, Archive, Cloud, Share2, FileCheck, Database, Search, Info, X } from 'lucide-react';
 import { Header } from './Header';
 import Footer from './Footer';
+import { useAuth0Custom } from '../contexts/AuthContext';
 
 const HomePage: React.FC = () => {
+  const { login } = useAuth0Custom();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -398,11 +400,6 @@ const HomePage: React.FC = () => {
 
   const futureFeatures = [
     {
-      icon: <Video className="w-6 h-6" />,
-      title: "AI Video Search",
-      description: "Search through video content using AI-powered analysis"
-    },
-    {
       icon: <Database className="w-6 h-6" />,
       title: "Multi-Platform Migration",
       description: "Migrate from other storage services like Dropbox, OneDrive, and more"
@@ -502,12 +499,22 @@ const HomePage: React.FC = () => {
                         VAMORY
                       </span>
                     </h1>
-                                                                                                                                   <p className="text-lg lg:text-xl text-white mb-8 max-w-xl mx-auto font-light tracking-wide uppercase">
-                    <span className="inline-block px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full">
+                                                                                                                                   <div className="mb-8">
+                     <div className="inline-flex flex-col sm:flex-row items-center gap-4 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full">
+                       <span className="text-lg lg:text-xl text-white font-light tracking-wide uppercase">
                       The next generation gallery
                     </span>
-                   </p>
-                   
+                       
+                       {/* Get Started Button */}
+                       <button
+                         onClick={login}
+                         className="inline-flex items-center px-6 py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl backdrop-blur-md border border-white/20"
+                       >
+                         <Sparkles className="w-4 h-4 mr-2" />
+                         Get Started
+                       </button>
+                     </div>
+                   </div>
                    
               </div>
            </div>
@@ -1237,19 +1244,19 @@ const HomePage: React.FC = () => {
                </p>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-               {futureFeatures.map((feature, index) => (
-                 <div key={index} className="group p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/15 transition-all duration-300 hover:transform hover:scale-105 shadow-lg shadow-black/20">
-                   <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-white/20 to-gray-500/20 rounded-xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                     <div className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
-                       {feature.icon}
-                     </div>
-                   </div>
-                   <h4 className="text-xl font-semibold mb-4 text-white">{feature.title}</h4>
-                   <p className="text-gray-400 leading-relaxed">{feature.description}</p>
-                 </div>
-               ))}
-             </div>
+                           <div className="flex justify-center">
+                {futureFeatures.map((feature, index) => (
+                  <div key={index} className="group p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/15 transition-all duration-300 hover:transform hover:scale-105 shadow-lg shadow-black/20 max-w-md">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-white/20 to-gray-500/20 rounded-xl mb-6 group-hover:scale-110 transition-transform duration-300">
+                      <div className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                        {feature.icon}
+                      </div>
+                    </div>
+                    <h4 className="text-xl font-semibold mb-4 text-white">{feature.title}</h4>
+                    <p className="text-gray-400 leading-relaxed">{feature.description}</p>
+                  </div>
+                ))}
+              </div>
            </div>
                  </section>
 
