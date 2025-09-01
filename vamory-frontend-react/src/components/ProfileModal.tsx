@@ -3,7 +3,9 @@ import { useAuth0Custom } from '../contexts/AuthContext';
 import { createPortal } from 'react-dom';
 import { useState, useRef } from 'react';
 import { ImageCropModal } from './ImageCropModal';
+import { StorageChart } from './StorageChart';
 import api from '../services/api';
+import { useProfileImage } from '../hooks/useProfileImage';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -19,6 +21,9 @@ export const ProfileModal = ({ isOpen, onClose }: ProfileModalProps) => {
   const [showCropModal, setShowCropModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use the profile image hook to handle Google profile images with proper headers
+  const { imageUrl, isLoading } = useProfileImage(auth0User?.picture);
 
   // Identify provider from Auth0 user.sub
   const getProvider = () => {
@@ -146,15 +151,26 @@ export const ProfileModal = ({ isOpen, onClose }: ProfileModalProps) => {
         {/* Profile Picture */}
         <div className="flex justify-center mb-6">
           <div className="relative">
-            {auth0User?.picture ? (
+            {imageUrl ? (
               <img
-                src={auth0User.picture}
+                src={imageUrl}
                 alt="Profile"
                 className="w-24 h-24 rounded-full object-cover border-4 border-blue-600/30"
+                onError={(e) => {
+                  // Fallback to user icon if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
               />
-            ) : (
+            ) : null}
+            {!imageUrl && !isLoading && (
               <div className="w-24 h-24 rounded-full bg-gray-700 border-4 border-blue-600/30 flex items-center justify-center">
                 <User className="w-12 h-12 text-gray-400" />
+              </div>
+            )}
+            {isLoading && (
+              <div className="w-24 h-24 rounded-full bg-gray-700 border-4 border-blue-600/30 flex items-center justify-center animate-pulse">
+                <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
               </div>
             )}
             
@@ -281,21 +297,17 @@ export const ProfileModal = ({ isOpen, onClose }: ProfileModalProps) => {
             </div>
 
             {/* Storage Usage */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white text-center">Storage Usage</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center py-2 border-b border-gray-700/30">
-                  <span className="text-gray-400">Standard Storage</span>
-                  <span className="text-blue-400 font-medium">{(user.storage_used_standard / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-700/30">
-                  <span className="text-gray-400">Archive Storage</span>
-                  <span className="text-blue-400 font-medium">{(user.storage_used_archived / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
-                </div>
-                <div className="flex justify-between items-center py-2 pt-3 border-t border-gray-700/30">
-                  <span className="text-gray-300 font-medium">Total Used</span>
-                  <span className="text-blue-400 font-bold">{((user.storage_used_standard + user.storage_used_archived) / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
-                </div>
+              
+              {/* Storage Chart */}
+              <div className="flex justify-center">
+                <StorageChart
+                  storageUsedStandard={user.storage_used_standard}
+                  storageUsedArchived={user.storage_used_archived}
+                  storageUsedStandardDeleted={user.storage_used_standard_deleted}
+                  storageUsedArchivedDeleted={user.storage_used_archived_deleted}
+                />
               </div>
             </div>
 

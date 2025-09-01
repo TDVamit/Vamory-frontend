@@ -3,6 +3,7 @@ import api from '../services/api';
 import { usersAPI } from '../services/api';
 import { UserRole } from '../types';
 import { ChevronDown } from 'lucide-react';
+import { getProfilePictureUrl } from '../utils/profileImageUtils';
 
 interface AdminUserRoleModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface UserListItem {
   email: string;
   user_role: UserRole;
   profile_pic?: string;
+  profile_pic_url?: string;
 }
 
 export const AdminUserRoleModal = forwardRef<AdminUserRoleModalRef, AdminUserRoleModalProps>(function AdminUserRoleModal(
@@ -48,6 +50,7 @@ export const AdminUserRoleModal = forwardRef<AdminUserRoleModalRef, AdminUserRol
         email: u.email,
         user_role: u.user_role || UserRole.user,
         profile_pic: u.profile_pic,
+        profile_pic_url: u.profile_pic_url,
       })));
       setTotalPages(res.meta?.page_count || 1);
       setPage(pageNum);
@@ -102,11 +105,14 @@ export const AdminUserRoleModal = forwardRef<AdminUserRoleModalRef, AdminUserRol
             users.map(user => (
               <div key={user._id} className="flex items-center gap-3 bg-black/50 glass rounded-lg border border-gray-700/30 px-3 py-2 hover:bg-black/60 transition-all">
                 <div className="flex-shrink-0">
-                  {user.profile_pic ? (
-                    <img src={user.profile_pic.startsWith('data:') ? user.profile_pic : `data:image/webp;base64,${user.profile_pic}`} alt={user.full_name} className="w-10 h-10 rounded-full object-cover border border-gray-700 bg-gray-800 shadow" />
-                  ) : (
-                    <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center text-gray-400 text-lg font-bold border border-gray-700">{user.full_name?.[0] || '?'}</div>
-                  )}
+                  {(() => {
+                    const profilePicUrl = getProfilePictureUrl(user);
+                    return profilePicUrl ? (
+                      <img src={profilePicUrl} alt={user.full_name} className="w-10 h-10 rounded-full object-cover border border-gray-700 bg-gray-800 shadow" />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center text-gray-400 text-lg font-bold border border-gray-700">{user.full_name?.[0] || '?'}</div>
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-base truncate">{user.full_name}</div>

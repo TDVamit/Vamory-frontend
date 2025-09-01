@@ -10,6 +10,8 @@ export interface User {
   credits: number;
   storage_used_standard: number;
   storage_used_archived: number;
+  storage_used_standard_deleted: number;
+  storage_used_archived_deleted: number;
   profile_pic_url?: string;
   is_active: boolean;
   created_at: string;

@@ -1,24 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search,  File, CheckSquare, Square, Folder as FolderIcon, Plus, Download, AlertTriangle, Sparkles } from 'lucide-react';
-import { publicFoldersAPI, aiSearchAPI } from '../services/api';
+import { publicFoldersAPI,  publicAiSearchAPI } from '../services/api';
 import { AISearchToggle } from './AISearchToggle';
 import { FolderCard } from './FolderCard';
 import { FileCard } from './FileCard';
 import { MediaGallery } from './MediaGallery';
+import { Header } from './Header';
 
 import type { Folder as FolderType, FileData, PaginatedResponse } from '../types';
+import { StorageType } from '../types';
 
 
 // Unauthorized UI
-const UnauthorizedPage = () => (
+const UnauthorizedPage = ({ onGoHome }: { onGoHome: () => void }) => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-4">
     <div className="bg-gray-800/80 border border-gray-700/40 rounded-2xl shadow-xl p-10 flex flex-col items-center max-w-md w-full">
       <AlertTriangle className="w-16 h-16 text-red-400 mb-4" />
       <h1 className="text-2xl font-bold mb-2 text-red-200">Unauthorized</h1>
       <p className="text-gray-300 mb-4 text-center">You do not have permission to view this folder.<br/>Please ask the owner to grant you access.</p>
       <button
-        onClick={() => window.location.href = '/'}
+        onClick={onGoHome}
         className="mt-2 px-6 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors shadow"
       >
         Go to Home
@@ -97,7 +99,7 @@ export const PublicFolderView = () => {
             _id: id,
             name: 'Unnamed Folder',
             parent_folder_id: undefined,
-            storage_type: 'STANDARD_IA',
+            storage_type: StorageType.STANDARD,
             owner_id: '',
             created_at: '',
             updated_at: '',
@@ -274,13 +276,13 @@ export const PublicFolderView = () => {
     const newTimeout = window.setTimeout(async () => {
       if (query.trim()) {
         if (isAISearchEnabled && folderId) {
-          // Use AI search within the current folder
+          // Use public AI search within the current folder
           setIsAISearchLoading(true);
           try {
-            const results = await aiSearchAPI.search(query, folderId);
+            const results = await publicAiSearchAPI.search(query, publicToken, folderId);
             setAiSearchResults(results);
           } catch (error) {
-            console.error('AI search failed:', error);
+            console.error('Public AI search failed:', error);
             // Fallback to regular search - just filter existing files
             setAiSearchResults(null);
           } finally {
@@ -309,14 +311,14 @@ export const PublicFolderView = () => {
       const query = searchQuery.trim();
       if (query) {
         if (isAISearchEnabled && folderId) {
-          // Use AI search within the current folder
+          // Use public AI search within the current folder
           setIsAISearchLoading(true);
-          aiSearchAPI.search(query, folderId)
+          publicAiSearchAPI.search(query, publicToken, folderId)
             .then(results => {
               setAiSearchResults(results);
             })
             .catch(error => {
-              console.error('AI search failed:', error);
+              console.error('Public AI search failed:', error);
               // Fallback to regular search - just filter existing files
               setAiSearchResults(null);
             })
@@ -347,6 +349,9 @@ export const PublicFolderView = () => {
   };
   const handleGalleryClose = () => setShowMediaGallery(false);
   const handleGalleryNavigate = (index: number) => setGalleryCurrentIndex(index);
+  const handleFileUpdated = (fileId: string, updatedFile: FileData) => {
+    setFiles(prev => prev.map(file => file._id === fileId ? updatedFile : file));
+  };
 
   // AI Search Gallery handlers
   const handleAISearchFileClick = (file: FileData) => {
@@ -424,7 +429,7 @@ export const PublicFolderView = () => {
 
   // Show loading state for initial load
   if (unauthorized) {
-    return <UnauthorizedPage />;
+    return <UnauthorizedPage onGoHome={() => navigate('/home')} />;
   }
   if (isLoading && !currentFolder) {
     return (
@@ -442,6 +447,9 @@ export const PublicFolderView = () => {
   // Always show navigation bar if currentFolder is not null
   return (
     <div className="min-h-screen surface-dark">
+      {/* Header */}
+      <Header />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
         {/* Navigation */}
         {currentFolder && (
@@ -718,6 +726,7 @@ export const PublicFolderView = () => {
             currentIndex={galleryCurrentIndex}
             onClose={handleGalleryClose}
             onNavigate={handleGalleryNavigate}
+            onFileUpdated={handleFileUpdated}
             isPublic={true}
             publicToken={publicToken}
           />

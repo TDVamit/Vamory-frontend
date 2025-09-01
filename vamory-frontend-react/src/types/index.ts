@@ -6,8 +6,14 @@ export interface User {
   _id: string;
   created_at: string;
   updated_at: string;
-  profile_pic?: string; // base64 profile picture
+  profile_pic?: string; // base64 profile picture (legacy)
+  profile_pic_url?: string; // S3 URL for profile picture
   user_role?: UserRole;
+  credits?: number;
+  storage_used_standard: number;
+  storage_used_archived: number;
+  storage_used_standard_deleted: number;
+  storage_used_archived_deleted: number;
 }
 
 export enum UserRole {
@@ -16,6 +22,11 @@ export enum UserRole {
   user = "user",
   viewer = "viewer",
   editor = "editor"
+}
+
+export enum StorageType {
+  STANDARD = "STANDARD",
+  DEEP_ARCHIVE = "DEEP_ARCHIVE"
 }
 
 export interface AuthResponse {
@@ -62,7 +73,7 @@ export interface Folder {
   _id: string;
   name: string;
   parent_folder_id?: string;
-  storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  storage_type: StorageType;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -85,7 +96,7 @@ export interface Folder {
 export interface CreateFolderRequest {
   name: string;
   parent_folder_id?: string;
-  storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  storage_type: StorageType;
 }
 
 export interface UpdateFolderRequest {
@@ -93,7 +104,7 @@ export interface UpdateFolderRequest {
 }
 
 export interface ChangeStorageTypeRequest {
-  new_storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  new_storage_type: StorageType;
   /**
    * Always true. The conversion will always apply to all subfolders and files. Not user-configurable.
    */
@@ -103,6 +114,9 @@ export interface ChangeStorageTypeRequest {
 }
 
 export interface FileData {
+  image_description: any;
+  file_hash: any;
+  public_token: any;
   _id: string;
   filename: string;
   original_filename?: string;
@@ -110,6 +124,7 @@ export interface FileData {
   content_type?: string;
   file_size: number;
   folder_id: string;
+  folder_name?: string;
   owner_id: string;
   s3_key?: string;
   s3_url?: string;
@@ -117,12 +132,14 @@ export interface FileData {
   thumbnail_s3_url?: string;
   thumbnail_url?: string;
   metadata?: Record<string, any>;
-  storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  storage_type: StorageType;
   archival_status?: string;
   archived_at?: string;
   upload_status?: string;
   created_at: string;
   updated_at: string;
+  deleted?: boolean;
+  deleted_at?: string;
 }
 
 export interface UploadFileResponse {
@@ -133,7 +150,7 @@ export interface UploadFileResponse {
   s3_url: string;
   thumbnail_url?: string;
   upload_status: string;
-  storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  storage_type: StorageType;
 }
 
 export interface UpdateFileRequest {
@@ -163,7 +180,7 @@ export interface FoldersRequest {
   per_page?: number;
   sort_by?: 'name' | 'created_at' | 'updated_at' | 'file_count' | 'subfolder_count' | 'total_size';
   sort_order?: 'asc' | 'desc';
-  storage_type?: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  storage_type?: StorageType;
   include_size?: boolean;
 }
 
@@ -176,7 +193,7 @@ export interface FilesRequest {
   sort_by?: 'filename' | 'file_size' | 'created_at' | 'updated_at' | 'file_type';
   sort_order?: 'asc' | 'desc';
   file_type?: 'image' | 'video' | 'document' | 'other';
-  storage_type?: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  storage_type?: StorageType;
   min_size?: number;
   max_size?: number;
 }
@@ -197,7 +214,7 @@ export interface UserSearchRequest {
 export interface AddFromGDriveRequest {
   gdrive_url: string;
   folder_name: string;
-  folder_storage_type: 'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE';
+  folder_storage_type: StorageType;
 }
 
 export interface AddFromGDriveResponse {
@@ -258,4 +275,166 @@ export interface LocationData {
   country_code?: string;
   currency?: string;
   country_name?: string;
+}
+
+// Notification types
+export interface Notification {
+  _id: string;
+  message: string;
+  message_data: Record<string, any>;
+  to_user_id: string;
+  email_sent: boolean;
+  notification_read: boolean;
+  created_at: string;
+  read_at: string | null;
+  mail_sent_at: string | null;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total_count: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface MarkReadResponse {
+  message: string;
+  notification_id: string;
+  marked_as_read: boolean;
+  read_at: string;
+}
+
+// Unknown faces types
+export interface FileReference {
+  file_id: string;
+  filename: string;
+  bbox: {
+    xmin: number;
+    ymin: number;
+    width: number;
+    height: number;
+  };
+  s3_url: string;
+  added_at: string;
+}
+
+export interface UnknownFace {
+  face_id: string;
+  file_references: FileReference[];
+}
+
+export interface UnknownFacesResponse {
+  data: UnknownFace[];
+  meta: PaginationMeta;
+}
+
+// Face detection types
+export interface FaceThumbnail {
+  face_id: string;
+  name: string | null;
+  thumbnail_s3_url: string;
+  thumbnail_bbox: {
+    xmin: number;
+    ymin: number;
+    width: number;
+    height: number;
+  };
+  thumbnail_filename: string;
+  total_file_references: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FaceDetail {
+  face_id: string;
+  name: string | null;
+  file_references: FileReference[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FaceNameSuggestion {
+  face_id: string;
+  name: string;
+  thumbnail_s3_url: string;
+  thumbnail_bbox: {
+    xmin: number;
+    ymin: number;
+    width: number;
+    height: number;
+  };
+  thumbnail_filename: string;
+}
+
+export interface FaceNameSuggestionResponse {
+  data: FaceNameSuggestion[];
+  meta: {
+    total_count: number;
+    page_count: number;
+    current_page: number;
+    per_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+    next_page: number | null;
+    prev_page: number | null;
+  };
+}
+
+export interface FaceListResponse {
+  data: FaceThumbnail[];
+  meta: {
+    total_count: number;
+    page_count: number;
+    current_page: number;
+    per_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+    next_page: number | null;
+    prev_page: number | null;
+  };
+}
+
+export interface MergeFaceRequest {
+  face_id: string;
+  target_face_id: string;
+}
+
+export interface NameFaceRequest {
+  face_id: string;
+  name: string;
+}
+
+// Cost structure types
+export interface StorageTier {
+  min_gb: number;
+  max_gb: number | null;
+  cost_per_gb: number;
+}
+
+export interface StorageCost {
+  storage_type: string;
+  tiers: StorageTier[];
+}
+
+export interface RetrievalCost {
+  cost_per_gb: number;
+}
+
+export interface CostResponse {
+  standard_storage: StorageCost;
+  archive_storage: StorageCost;
+  retrieval: RetrievalCost;
+  updated_at: string;
+  updated_by: string | null;
+  _id: string;
+}
+
+// Public token types
+export interface PublicTokenPayload {
+  origin: string;
+  created_at: string;
+  [key: string]: any; // Allow additional properties for JWT compatibility
 }

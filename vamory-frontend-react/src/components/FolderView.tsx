@@ -257,6 +257,10 @@ export const FolderView = () => {
     setFiles(prev => prev.filter(file => file._id !== deletedFileId));
   };
 
+  const handleFileUpdated = (fileId: string, updatedFile: FileData) => {
+    setFiles(prev => prev.map(file => file._id === fileId ? updatedFile : file));
+  };
+
   const handleCreateFolderSuccess = () => {
     handleRefresh();
   };
@@ -933,6 +937,7 @@ export const FolderView = () => {
             onClose={handleGalleryClose}
             onNavigate={handleGalleryNavigate}
             onFileDeleted={handleFileDeleted}
+            onFileUpdated={handleFileUpdated}
           />
         )}
 

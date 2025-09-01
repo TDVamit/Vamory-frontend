@@ -3,7 +3,7 @@ import { X, FolderPlus, Link as LinkIcon } from 'lucide-react';
 import { filesAPI } from '../services/api';
 import { useAuth0Custom } from '../contexts/AuthContext';
 import type { AddFromGDriveRequest } from '../types';
-import { UserRole } from '../types';
+import { UserRole, StorageType } from '../types';
 
 interface AddFromGDriveModalProps {
   isOpen: boolean;
@@ -15,10 +15,9 @@ export const AddFromGDriveModal = ({ isOpen, onClose, onSuccess }: AddFromGDrive
   const { user } = useAuth0Custom();
   const canAddFromGDrive = user?.user_role === UserRole.super_admin || user?.user_role === UserRole.admin || user?.user_role === UserRole.user;
 
-  const [formData, setFormData] = useState<AddFromGDriveRequest>({
+  const [formData, setFormData] = useState<Omit<AddFromGDriveRequest, 'folder_storage_type'>>({
     gdrive_url: '',
     folder_name: '',
-    folder_storage_type: 'STANDARD_IA',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +28,6 @@ export const AddFromGDriveModal = ({ isOpen, onClose, onSuccess }: AddFromGDrive
       setFormData({
         gdrive_url: '',
         folder_name: '',
-        folder_storage_type: 'STANDARD_IA',
       });
       setErrors({});
       setError(null);
@@ -52,7 +50,11 @@ export const AddFromGDriveModal = ({ isOpen, onClose, onSuccess }: AddFromGDrive
 
     setIsLoading(true);
     try {
-      const result = await filesAPI.addFromGDrive(formData);
+      const requestData: AddFromGDriveRequest = {
+        ...formData,
+        folder_storage_type: StorageType.STANDARD, // Users can only create standard folders
+      };
+      const result = await filesAPI.addFromGDrive(requestData);
       if (result.success) {
         onSuccess();
         onClose();
@@ -137,21 +139,12 @@ export const AddFromGDriveModal = ({ isOpen, onClose, onSuccess }: AddFromGDrive
             {errors.folder_name && <p className="text-red-400 text-xs mt-1">{errors.folder_name}</p>}
           </div>
 
-          <div>
-            <label htmlFor="folder_storage_type" className="block text-sm font-medium text-gray-300 mb-2">
-              Storage Type
-            </label>
-            <select
-              id="folder_storage_type"
-              name="folder_storage_type"
-              value={formData.folder_storage_type}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-gray-800/30 backdrop-blur-sm border border-gray-600/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 transition-all"
-            >
-              <option value="STANDARD_IA">Standard IA</option>
-              <option value="GLACIER_IR">Glacier IR</option>
-              <option value="DEEP_ARCHIVE">Deep Archive</option>
-            </select>
+          <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-300">Storage Type</span>
+            </div>
+            <p className="text-sm text-blue-200">All imported folders are created as Standard storage. You can convert to Deep Archive later if needed.</p>
           </div>
 
           <div className="flex gap-3 pt-4">

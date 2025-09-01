@@ -3,6 +3,7 @@ import { X, Search, Share2, User as UserIcon, Mail,  Eye, Edit, Crown, Trash2, L
 import { useFolderManager } from '../hooks/useFolderManager';
 import { usersAPI } from '../services/api';
 import type { Folder, ShareFolderRequest, User } from '../types';
+import { getProfilePictureUrl } from '../utils/profileImageUtils';
 
 interface ShareFolderModalProps {
   isOpen: boolean;
@@ -342,17 +343,20 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          {user.profile_pic ? (
-                            <img
-                              src={user.profile_pic.startsWith('data:') ? user.profile_pic : `data:image/webp;base64,${user.profile_pic}`}
-                              alt={user.full_name}
-                              className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
-                              <UserIcon className="w-4 h-4 text-gray-400" />
-                            </div>
-                          )}
+                          {(() => {
+                            const profilePicUrl = getProfilePictureUrl(user);
+                            return profilePicUrl ? (
+                              <img
+                                src={profilePicUrl}
+                                alt={user.full_name}
+                                className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
+                                <UserIcon className="w-4 h-4 text-gray-400" />
+                              </div>
+                            );
+                          })()}
                           <div className="flex-1">
                             <div className="font-medium">{user.full_name}</div>
                             <div className="text-sm opacity-75 flex items-center gap-1">
@@ -380,17 +384,20 @@ export const ShareFolderModal = ({ isOpen, folder, onClose, onSuccess }: ShareFo
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-300 mb-2">Selected User</h3>
               <div className="flex items-center gap-3 p-3 bg-black/40 rounded-lg border border-gray-700/30">
-                {selectedUser.profile_pic ? (
-                  <img
-                    src={selectedUser.profile_pic.startsWith('data:') ? selectedUser.profile_pic : `data:image/webp;base64,${selectedUser.profile_pic}`}
-                    alt={selectedUser.full_name}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
-                  />
-                ) : (
-                  <div className="w-8 h-8 bg-gray-600/50 rounded-full flex items-center justify-center">
-                    <UserIcon className="w-4 h-4 text-gray-300" />
-                  </div>
-                )}
+                {(() => {
+                  const profilePicUrl = getProfilePictureUrl(selectedUser);
+                  return profilePicUrl ? (
+                    <img
+                      src={profilePicUrl}
+                      alt={selectedUser.full_name}
+                      className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-600/50 rounded-full flex items-center justify-center">
+                      <UserIcon className="w-4 h-4 text-gray-300" />
+                    </div>
+                  );
+                })()}
                 <div className="flex-1">
                   <div className="text-white font-medium">{selectedUser.full_name}</div>
                   <div className="text-sm text-gray-300">{selectedUser.email}</div>

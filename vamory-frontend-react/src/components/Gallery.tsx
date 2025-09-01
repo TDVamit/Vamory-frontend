@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Sparkles } from 'lucide-react';
+import { Search, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { useAuth0Custom } from '../contexts/AuthContext';
 import { useFolders } from '../hooks/useFolders';
@@ -479,6 +479,11 @@ export const Gallery = () => {
                         onClick: () => setIsAddFromGDriveOpen(true),
                         icon: <Plus size={16} />,
                         disabled: hasZeroCredits,
+                      },
+                      {
+                        label: 'Recycle Bin',
+                        onClick: () => navigate('/recycle-bin'),
+                        icon: <Trash2 size={16} />,
                       },
                     ]}
                   />

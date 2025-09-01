@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { SignJWT } from 'jose';
 import type {
   FoldersApiResponse,
   FoldersRequest,
@@ -16,14 +17,48 @@ import type {
   AddFromGDriveRequest,
   AddFromGDriveResponse,
   FileDownloadResponse,
-  ExchangeRateResponse
+  ExchangeRateResponse,
+  NotificationsResponse,
+  MarkReadResponse,
+  UnknownFacesResponse,
+  FaceListResponse,
+  FaceDetail,
+  FaceNameSuggestionResponse,
+  MergeFaceRequest,
+  NameFaceRequest,
+  CostResponse,
+  PublicTokenPayload
 } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'https://api.vamory.vadaevri.com';
 
+const PUBLIC_SECRET_KEY = '3bc71e4b3b8e89bdd234f4839dd6ada1';
+
 // Debug: Log the environment variable to verify it's working
 console.log('VITE_BACKEND_BASE_URL:', import.meta.env.VITE_BACKEND_BASE_URL);
 console.log('API_BASE_URL:', API_BASE_URL);
+
+/**
+ * Generate a public JWT token for API requests
+ * @returns JWT token string
+ */
+export const generatePublicToken = async (): Promise<string> => {
+  // Create timestamp in format that Python's datetime.fromisoformat() can parse
+  const now = new Date();
+  const timestamp = now.toISOString().replace('Z', '+00:00');
+  
+  const payload: PublicTokenPayload = {
+    origin: 'vamory.vadaevri.com',
+    created_at: timestamp
+  };
+  
+  const secret = new TextEncoder().encode(PUBLIC_SECRET_KEY);
+  const jwt = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .sign(secret);
+  
+  return jwt;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -291,6 +326,22 @@ export const filesAPI = {
     return response.data;
   },
 
+  /**
+   * Make a file public
+   */
+  makeFilePublic: async (fileId: string): Promise<{ message: string; public_token: string }> => {
+    const response = await api.post(`/api/v1/files/${fileId}/make-public`);
+    return response.data;
+  },
+
+  /**
+   * Make a file private
+   */
+  makeFilePrivate: async (fileId: string): Promise<{ message: string }> => {
+    const response = await api.post(`/api/v1/files/${fileId}/make-private`);
+    return response.data;
+  },
+
   addFromGDrive: async (data: AddFromGDriveRequest): Promise<AddFromGDriveResponse> => {
     const response = await api.post('/api/v1/files/add-from-gdrive', data);
     return response.data;
@@ -322,6 +373,27 @@ export const filesAPI = {
       console.error('Failed to fetch first folder file:', error);
       return null;
     }
+  },
+
+  // Get deleted files (trash)
+  getTrashFiles: async (params: { page?: number; per_page?: number; sort_by?: string; sort_order?: 'asc' | 'desc' } = {}): Promise<PaginatedResponse<FileData>> => {
+    const filtered = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    );
+    const response = await api.get('/api/v1/files/trash', { params: filtered });
+    return response.data;
+  },
+
+  // Restore a deleted file
+  restoreFile: async (fileId: string): Promise<{ message: string; file_id: string }> => {
+    const response = await api.post(`/api/v1/files/${fileId}/restore`);
+    return response.data;
+  },
+
+  // Permanently delete a file
+  permanentDeleteFile: async (fileId: string): Promise<{ message: string; file_id: string }> => {
+    const response = await api.delete(`/api/v1/files/${fileId}/permanent`);
+    return response.data;
   },
 };
 
@@ -380,14 +452,53 @@ export const aiSearchAPI = {
   },
 };
 
+// Public AI Search API (no auth required)
+export const publicAiSearchAPI = {
+  /**
+   * Search files in public folders using AI
+   */
+  search: async (query: string, publicToken: string, folderId: string): Promise<{ categories: Record<string, FileData[]> }> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/ai-search/public/ai-search/`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { query, token: publicToken, folder_id: folderId },
+    });
+    return response.data;
+  },
+};
+
 // Public folder API (no auth required)
 export const publicFoldersAPI = {
   /**
    * Get public folder info by token and folder_id
    */
   getPublicFolder: async (publicToken: string, folderId: string): Promise<Folder> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/folders/public/folders/${publicToken}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { folder_id: folderId },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get public folder by path
+   */
+  getPublicFolderByPath: async (publicToken: string, folderPath: string): Promise<Folder> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/folders/public/folders/${publicToken}/path/${folderPath}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get all public folders
+   */
+  getAllPublicFolders: async (): Promise<Folder[]> => {
+    const token = await generatePublicToken();
     const response = await axios.get(`${API_BASE_URL}/api/v1/folders/public/folders/`, {
-      params: { token: publicToken, folder_id: folderId },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -400,10 +511,12 @@ export const publicFoldersAPI = {
     folderId: string,
     params: FilesRequest = {}
   ): Promise<PaginatedResponse<FileData>> => {
+    const token = await generatePublicToken();
     const filteredParams = Object.fromEntries(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
     );
     const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/`, {
+      headers: { Authorization: `Bearer ${token}` },
       params: { token: publicToken, folder_id: folderId, ...filteredParams },
     });
     return response.data;
@@ -413,8 +526,43 @@ export const publicFoldersAPI = {
    * Get a public file by ID and token
    */
   getPublicFileById: async (fileId: string, publicToken: string): Promise<FileData> => {
+    const token = await generatePublicToken();
     const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/file`, {
+      headers: { Authorization: `Bearer ${token}` },
       params: { token: publicToken, file_id: fileId },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get a public file by public token
+   */
+  getPublicFileByToken: async (publicToken: string): Promise<FileData> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/${publicToken}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  },
+
+  /**
+   * Download a public file by public token
+   */
+  downloadPublicFile: async (publicToken: string): Promise<FileDownloadResponse> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/${publicToken}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get thumbnail for a public file by public token
+   */
+  getPublicFileThumbnail: async (publicToken: string): Promise<string> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/files/public/files/${publicToken}/thumbnail`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   },
@@ -426,9 +574,136 @@ export const currencyAPI = {
    * Get exchange rate for currency conversion
    */
   getExchangeRate: async (base: string, target: string, amount: number): Promise<ExchangeRateResponse> => {
-    const response = await api.get('/api/v1/credit/exchange-rate', {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/credit/exchange-rate`, {
+      headers: { Authorization: `Bearer ${token}` },
       params: { base, target, amount }
     });
+    return response.data;
+  },
+};
+
+// Cost API
+export const costAPI = {
+  /**
+   * Get storage and retrieval costs
+   */
+  getCosts: async (): Promise<CostResponse> => {
+    const token = await generatePublicToken();
+    const response = await axios.get(`${API_BASE_URL}/api/v1/credit/costs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  },
+};
+
+// Notifications API
+export const notificationsAPI = {
+  /**
+   * Get notifications with optional filters
+   */
+  getNotifications: async (params: {
+    status_filter?: 'all' | 'read' | 'unread';
+    search?: string;
+    page?: number;
+    per_page?: number;
+    sort_by?: 'created_at' | 'message' | 'notification_read';
+    sort_order?: 'asc' | 'desc';
+  } = {}): Promise<NotificationsResponse> => {
+    const filtered = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    );
+    const response = await api.get('/api/v1/notifications/', { params: filtered });
+    return response.data;
+  },
+
+  /**
+   * Mark a notification as read
+   */
+  markAsRead: async (notificationId: string): Promise<MarkReadResponse> => {
+    const response = await api.post(`/api/v1/notifications/${notificationId}/mark-read`);
+    return response.data;
+  },
+
+  /**
+   * Get unread notifications count
+   */
+  getUnreadCount: async (): Promise<number> => {
+    const response = await api.get('/api/v1/notifications/', {
+      params: { status_filter: 'unread', per_page: 1 }
+    });
+    return response.data.total_count;
+  },
+};
+
+// Unknown faces API
+export const unknownFacesAPI = {
+  /**
+   * Get unknown faces
+   */
+  getUnknownFaces: async (params: {
+    page?: number;
+    per_page?: number;
+  } = {}): Promise<UnknownFacesResponse> => {
+    const filtered = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    );
+    const response = await api.get('/api/v1/faces/unknown', { params: filtered });
+    return response.data;
+  },
+
+  /**
+   * Get unknown faces count
+   */
+  getUnknownFacesCount: async (): Promise<number> => {
+    const response = await api.get('/api/v1/faces/unknown', {
+      params: { per_page: 1 }
+    });
+    return response.data.meta.total_count;
+  },
+};
+
+// Face detection API
+export const faceDetectionAPI = {
+  /**
+   * Get all faces with pagination
+   */
+  getAllFaces: async (params: { page?: number; per_page?: number; named_only?: boolean }): Promise<FaceListResponse> => {
+    const response = await api.get('/api/v1/faces/', { params });
+    return response.data;
+  },
+
+  /**
+   * Get face details by face ID
+   */
+  getFaceDetail: async (faceId: string): Promise<FaceDetail> => {
+    const response = await api.get(`/api/v1/faces/${faceId}`);
+    return response.data;
+  },
+
+  /**
+   * Get name suggestions for face naming
+   */
+  getNameSuggestions: async (namePattern: string, page?: number, per_page?: number): Promise<FaceNameSuggestionResponse> => {
+    const response = await api.get('/api/v1/faces/name-suggestion', {
+      params: { name_pattern: namePattern, page, per_page }
+    });
+    return response.data;
+  },
+
+  /**
+   * Merge faces (when selecting a suggested name)
+   */
+  mergeFaces: async (data: MergeFaceRequest): Promise<any> => {
+    const response = await api.post('/api/v1/faces/merge', data);
+    return response.data;
+  },
+
+  /**
+   * Name a face with a custom name
+   */
+  nameFace: async (data: NameFaceRequest): Promise<any> => {
+    const response = await api.put('/api/v1/faces/name', data);
     return response.data;
   },
 };

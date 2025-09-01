@@ -3,7 +3,7 @@ import { X, FolderPlus } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
 import { useAuth0Custom } from '../contexts/AuthContext';
 import type { CreateFolderRequest } from '../types';
-import { UserRole } from '../types';
+import { UserRole, StorageType } from '../types';
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -17,7 +17,6 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
   const hasZeroCredits = user && user.credits === 0;
   const [formData, setFormData] = useState({
     name: '',
-    storage_type: 'STANDARD_IA' as const,
   });
   const [_errors, setErrors] = useState<Record<string, string>>({});
   const { createFolder, isLoading, error } = useFolderManager();
@@ -27,7 +26,6 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
     if (isOpen) {
       setFormData({
         name: '',
-        storage_type: 'STANDARD_IA',
       });
       setErrors({});
     }
@@ -49,7 +47,7 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
 
     const createData: CreateFolderRequest = {
       name: formData.name.trim(),
-      storage_type: formData.storage_type,
+      storage_type: StorageType.STANDARD, // Users can only create standard folders
       parent_folder_id: parentFolderId,
     };
 
@@ -59,7 +57,6 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
       onClose();
       setFormData({
         name: '',
-        storage_type: 'STANDARD_IA',
       });
     }
   };
@@ -115,21 +112,12 @@ export const CreateFolderModal = ({ isOpen, onClose, onSuccess, parentFolderId }
             />
           </div>
 
-          <div>
-            <label htmlFor="storage_type" className="block text-sm font-medium text-gray-300 mb-2">
-              Storage Type
-            </label>
-            <select
-              id="storage_type"
-              name="storage_type"
-              value={formData.storage_type}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-gray-800/30 backdrop-blur-sm border border-gray-600/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 transition-all"
-            >
-              <option value="STANDARD_IA">Standard IA</option>
-              <option value="GLACIER_IR">Glacier IR</option>
-              <option value="DEEP_ARCHIVE">Deep Archive</option>
-            </select>
+          <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-300">Storage Type</span>
+            </div>
+            <p className="text-sm text-blue-200">All new folders are created as Standard storage. You can convert to Deep Archive later if needed.</p>
           </div>
 
           <div className="flex gap-3 pt-4">

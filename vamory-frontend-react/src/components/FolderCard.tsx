@@ -10,6 +10,7 @@ import { ConversionStatusModal } from './ConversionStatusModal';
 import { ErrorModal } from './ErrorModal';
 import type { Folder as FolderType } from '../types';
 import type { FileData } from '../types';
+import { StorageType } from '../types';
 
 interface FolderCardProps {
   folder: FolderType;
@@ -134,39 +135,33 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile, isP
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  const getStorageTypeColor = (storageType: string) => {
+  const getStorageTypeColor = (storageType: StorageType) => {
     switch (storageType) {
-      case 'STANDARD_IA':
+      case StorageType.STANDARD:
         return 'text-gray-300';
-      case 'GLACIER_IR':
-        return 'text-gray-300';
-      case 'DEEP_ARCHIVE':
+      case StorageType.DEEP_ARCHIVE:
         return 'text-gray-300';
       default:
         return 'text-gray-300';
     }
   };
 
-  const getStorageTypeDotColor = (storageType: string) => {
+  const getStorageTypeDotColor = (storageType: StorageType) => {
     switch (storageType) {
-      case 'STANDARD_IA':
+      case StorageType.STANDARD:
         return 'bg-gray-400';
-      case 'GLACIER_IR':
-        return 'bg-gray-500';
-      case 'DEEP_ARCHIVE':
+      case StorageType.DEEP_ARCHIVE:
         return 'bg-gray-600';
       default:
         return 'bg-gray-400';
     }
   };
 
-  const getStorageTypeLabel = (storageType: string) => {
+  const getStorageTypeLabel = (storageType: StorageType) => {
     switch (storageType) {
-      case 'STANDARD_IA':
+      case StorageType.STANDARD:
         return 'Standard';
-      case 'GLACIER_IR':
-        return 'Glacier';
-      case 'DEEP_ARCHIVE':
+      case StorageType.DEEP_ARCHIVE:
         return 'Archive';
       default:
         return storageType;
@@ -324,7 +319,7 @@ export const FolderCard = ({ folder, onClick, onDelete, onUpdate, videoFile, isP
             {showActions && createPortal(
               <div 
                 ref={menuRef}
-                className="fixed bg-black/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
+                className="fixed bg-black/80 backdrop-blur-md rounded-lg shadow-lg border border-gray-600/20 z-50 py-1 min-w-[140px]"
                 style={{overflow: 'visible', top: dropdownPosition.top, left: dropdownPosition.left, minWidth: 140}}
               >
                 <button

@@ -178,6 +178,24 @@ const FAQPage: React.FC = () => {
                 You can reach our support team at support@vamory.vadaevri.com. We typically respond within 24 hours. You can also use the contact form on our website for technical issues, feature requests, or account help.
               </p>
             </div>
+
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-3">
+                What is the minimum billable storage size?
+              </h3>
+              <p className="text-gray-400">
+                Files smaller than 128KB will be billed as if they were 128KB in size. This ensures fair pricing for very small files while maintaining our cost-effective storage model.
+              </p>
+            </div>
+
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-3">
+                Are there additional charges for thumbnails?
+              </h3>
+              <p className="text-gray-400">
+                Yes, each file requires a thumbnail for display purposes, and thumbnail charges will be added to your total bill. This ensures you can preview your files in the gallery interface.
+              </p>
+            </div>
           </div>
         </div>
       </section>

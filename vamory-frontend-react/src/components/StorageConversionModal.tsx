@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, HardDrive, Archive, Database } from 'lucide-react';
+import { X, HardDrive, Archive } from 'lucide-react';
 import { useFolderManager } from '../hooks/useFolderManager';
 import type { Folder, ChangeStorageTypeRequest } from '../types';
+import { StorageType } from '../types';
 
 interface StorageConversionModalProps {
   isOpen: boolean;
@@ -11,26 +12,26 @@ interface StorageConversionModalProps {
 }
 
 export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: StorageConversionModalProps) => {
-  const [newStorageType, setNewStorageType] = useState<'STANDARD_IA' | 'GLACIER_IR' | 'DEEP_ARCHIVE'>('STANDARD_IA');
+  const [newStorageType, setNewStorageType] = useState<StorageType>(StorageType.STANDARD);
   const [_applyToChildren, setApplyToChildren] = useState(true);
   const [retrievalDays, setRetrievalDays] = useState(5);
-  const [retrievalMode, setRetrievalMode] = useState<'Standard' | 'Bulk'>('Bulk');
+  const [retrievalMode, setRetrievalMode] = useState<'Standard'>('Standard');
   const { changeStorageType, isLoading, error } = useFolderManager();
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setNewStorageType(folder.storage_type === 'DEEP_ARCHIVE' ? 'STANDARD_IA' : 'DEEP_ARCHIVE');
+      setNewStorageType(folder.storage_type === StorageType.DEEP_ARCHIVE ? StorageType.STANDARD : StorageType.DEEP_ARCHIVE);
       setApplyToChildren(true); // Always true
       setRetrievalDays(5);
-      setRetrievalMode('Bulk');
+      setRetrievalMode('Standard');
     }
   }, [isOpen, folder.storage_type]);
 
   if (!isOpen) return null;
 
-  const isConvertingFromDeepArchive = folder.storage_type === 'DEEP_ARCHIVE';
-  const needsRetrievalSettings = isConvertingFromDeepArchive && (newStorageType === 'STANDARD_IA' || newStorageType === 'GLACIER_IR');
+  const isConvertingFromDeepArchive = folder.storage_type === StorageType.DEEP_ARCHIVE;
+  const needsRetrievalSettings = isConvertingFromDeepArchive && newStorageType === StorageType.STANDARD;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,39 +53,33 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
     }
   };
 
-  const getStorageTypeIcon = (type: string) => {
+  const getStorageTypeIcon = (type: StorageType) => {
     switch (type) {
-      case 'STANDARD_IA':
+      case StorageType.STANDARD:
         return HardDrive;
-      case 'GLACIER_IR':
-        return Database;
-      case 'DEEP_ARCHIVE':
+      case StorageType.DEEP_ARCHIVE:
         return Archive;
       default:
         return HardDrive;
     }
   };
 
-  const getStorageTypeLabel = (type: string) => {
+  const getStorageTypeLabel = (type: StorageType) => {
     switch (type) {
-      case 'STANDARD_IA':
-        return 'Standard IA';
-      case 'GLACIER_IR':
-        return 'Glacier IR';
-      case 'DEEP_ARCHIVE':
+      case StorageType.STANDARD:
+        return 'Standard';
+      case StorageType.DEEP_ARCHIVE:
         return 'Deep Archive';
       default:
         return type;
     }
   };
 
-  const getStorageTypeDescription = (type: string) => {
+  const getStorageTypeDescription = (type: StorageType) => {
     switch (type) {
-      case 'STANDARD_IA':
+      case StorageType.STANDARD:
         return 'Fast access, higher cost';
-      case 'GLACIER_IR':
-        return 'Medium access time, medium cost';
-      case 'DEEP_ARCHIVE':
+      case StorageType.DEEP_ARCHIVE:
         return 'Slow access, lowest cost';
       default:
         return '';
@@ -128,7 +123,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
               Convert To
             </label>
             <div className="space-y-2">
-              {(['STANDARD_IA', 'GLACIER_IR', 'DEEP_ARCHIVE'] as const).map((type) => {
+              {([StorageType.STANDARD, StorageType.DEEP_ARCHIVE] as const).map((type) => {
                 if (type === folder.storage_type) return null;
                 const Icon = getStorageTypeIcon(type);
                 
@@ -146,7 +141,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
                       name="storageType"
                       value={type}
                       checked={newStorageType === type}
-                      onChange={(e) => setNewStorageType(e.target.value as any)}
+                      onChange={(e) => setNewStorageType(e.target.value as StorageType)}
                       className="sr-only"
                     />
                     <Icon className="w-5 h-5" />
@@ -160,7 +155,7 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
             </div>
           </div>
 
-          {/* Retrieval Settings - Only for DEEP_ARCHIVE to other types */}
+          {/* Retrieval Settings - Only for DEEP_ARCHIVE to STANDARD */}
           {needsRetrievalSettings && (
             <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <h4 className="text-sm font-medium text-yellow-300 mb-3">Retrieval Settings</h4>
@@ -180,35 +175,10 @@ export const StorageConversionModal = ({ isOpen, folder, onClose, onSuccess }: S
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Retrieval Mode
-                  </label>
-                  <select
-                    value={retrievalMode}
-                    onChange={(e) => setRetrievalMode(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50"
-                  >
-                    <option value="Bulk">Bulk (12-48 hours, lowest cost)</option>
-                    <option value="Standard">Standard (3-5 hours, medium cost)</option>
-                  </select>
-                </div>
+                
               </div>
             </div>
           )}
-
-          {/* Apply to Children */}
-          {/*
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={applyToChildren}
-                onChange={(e) => setApplyToChildren(e.target.checked)}
-                className="w-4 h-4 bg-gray-800 border border-gray-600 rounded focus:ring-2 focus:ring-gray-400/50 text-gray-300"
-              />
-              <span className="text-sm text-gray-300">Apply to all subfolders and files</span>
-            </label>
-          */}
 
           {/* Error Display */}
           {error && (

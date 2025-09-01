@@ -3,6 +3,10 @@ import { Gallery } from './components/Gallery';
 import { FolderView } from './components/FolderView';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicFolderView } from './components/PublicFolderView';
+import { PublicFileView } from './components/PublicFileView';
+import { FaceDetectionPage } from './components/FaceDetectionPage';
+import { FaceDetailPage } from './components/FaceDetailPage';
+import { RecycleBin } from './components/RecycleBin';
 import HomePage from './components/HomePage';
 import PricingPage from './components/PricingPage';
 import ContactPage from './components/ContactPage';
@@ -56,6 +60,7 @@ const AppContent = () => {
         {/* Shared folder browsing routes (public, not wrapped in ProtectedRoute) */}
         <Route path="/shared/folder" element={<PublicFolderView />} />
         <Route path="/shared/folder/:params" element={<PublicFolderView />} />
+        <Route path="/shared/file" element={<PublicFileView />} />
 
         {/* Auth-protected routes */}
         <Route
@@ -71,6 +76,30 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <FolderView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faces"
+          element={
+            <ProtectedRoute>
+              <FaceDetectionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faces/:faceId"
+          element={
+            <ProtectedRoute>
+              <FaceDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recycle-bin"
+          element={
+            <ProtectedRoute>
+              <RecycleBin />
             </ProtectedRoute>
           }
         />

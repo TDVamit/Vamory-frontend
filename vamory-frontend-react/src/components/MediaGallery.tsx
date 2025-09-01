@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2, Download, MoreVertical, Download as DownloadIcon, Trash2, Info } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2, Download, MoreVertical, Download as DownloadIcon, Trash2, Info, Share2 } from 'lucide-react';
 import type { FileData } from '../types';
 import { useFileManager } from '../hooks/useFileManager';
+import { ShareFileModal } from './ShareFileModal';
 
 interface MediaGalleryProps {
   files: FileData[];
@@ -9,11 +10,12 @@ interface MediaGalleryProps {
   onClose: () => void;
   onNavigate: (index: number) => void;
   onFileDeleted?: (fileId: string) => void;
+  onFileUpdated?: (fileId: string, updatedFile: FileData) => void;
   isPublic?: boolean;
   publicToken?: string;
 }
 
-export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileDeleted, isPublic = false }: MediaGalleryProps) => {
+export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileDeleted, onFileUpdated, isPublic = false }: MediaGalleryProps) => {
   const [currentFileIndex, setCurrentFileIndex] = useState(currentIndex);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -29,6 +31,7 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileD
   const [isDeleting, setIsDeleting] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const { downloadFile, deleteFile } = useFileManager();
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -350,7 +353,7 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileD
       className="fixed inset-0 z-50 flex flex-col h-screen bg-black/90 backdrop-blur-sm text-white select-none"
       tabIndex={-1}
       onClick={() => {
-        if (!showOptions && !showInfoModal) onClose();
+        if (!showOptions && !showInfoModal && !showShareModal) onClose();
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -394,6 +397,13 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileD
               >
                 <DownloadIcon className="w-4 h-4" />
                 Download
+              </button>
+              <button
+                onClick={() => { setShowOptions(false); setShowShareModal(true); }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/30 hover:text-white flex items-center gap-2 transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
               </button>
               {/* Only show delete if not public */}
               {!isPublic && (
@@ -655,6 +665,21 @@ export const MediaGallery = ({ files, currentIndex, onClose, onNavigate, onFileD
           </div>
         </div>
       )}
+
+      {/* Share File Modal */}
+      <ShareFileModal
+        isOpen={showShareModal}
+        file={currentFile}
+        onClose={() => setShowShareModal(false)}
+        onSuccess={(updatedFile) => {
+          // Don't close the ShareFileModal - let it stay open
+          // Update the current file in the files array
+          if (updatedFile && onFileUpdated) {
+            onFileUpdated(currentFile._id, updatedFile);
+          }
+          // Don't close the MediaGallery - just update the file
+        }}
+      />
     </div>
   );
 }; 

@@ -4,6 +4,7 @@ import {  ArrowLeft, Archive, Clock, DollarSign, Zap, Calculator, Globe, Chevron
 import { Header } from './Header';
 import Footer from './Footer';
 import { useCurrency } from '../hooks/useCurrency';
+import { useCosts } from '../hooks/useCosts';
 
 const PricingPage: React.FC = () => {
   const [standardGB, setStandardGB] = useState(0);
@@ -16,85 +17,40 @@ const PricingPage: React.FC = () => {
     setSelectedCurrency,
     locationData,
     exchangeRate,
-    loading,
-    error,
+    loading: currencyLoading,
+    error: currencyError,
     convertCurrency,
     getFormattedPrice,
     getCurrencyOptions,
     currencies
   } = useCurrency();
 
+  const {
+    costs,
+    loading: costsLoading,
+    error: costsError,
+    calculateStandardCost,
+    calculateArchiveCost,
+    calculateRetrievalCost,
+  } = useCosts();
+
   // Prevent scroll wheel from changing number input values
   const preventScroll = (e: React.WheelEvent<HTMLInputElement>) => {
     e.preventDefault();
   };
 
-  // Calculate standard storage cost
-  const calculateStandardCost = (gb: number) => {
-    let totalCost = 0;
-    let remainingGB = gb;
-
-    // First 10GB at $0.035/GB
-    if (remainingGB > 0) {
-      const firstTier = Math.min(remainingGB, 10);
-      totalCost += firstTier * 0.035;
-      remainingGB -= firstTier;
-    }
-
-    // Next 20GB at $0.033/GB
-    if (remainingGB > 0) {
-      const secondTier = Math.min(remainingGB, 20);
-      totalCost += secondTier * 0.033;
-      remainingGB -= secondTier;
-    }
-
-    // Remaining GB at $0.03/GB
-    if (remainingGB > 0) {
-      totalCost += remainingGB * 0.03;
-    }
-
-    return totalCost;
-  };
-
-  // Calculate archive storage cost
-  const calculateArchiveCost = (gb: number) => {
-    let totalCost = 0;
-    let remainingGB = gb;
-
-    // First 10GB at $0.0035/GB
-    if (remainingGB > 0) {
-      const firstTier = Math.min(remainingGB, 10);
-      totalCost += firstTier * 0.0035;
-      remainingGB -= firstTier;
-    }
-
-    // Next 20GB at $0.0033/GB
-    if (remainingGB > 0) {
-      const secondTier = Math.min(remainingGB, 20);
-      totalCost += secondTier * 0.0033;
-      remainingGB -= secondTier;
-    }
-
-    // Remaining GB at $0.003/GB
-    if (remainingGB > 0) {
-      totalCost += remainingGB * 0.003;
-    }
-
-    return totalCost;
-  };
-
   const standardCost = calculateStandardCost(standardGB);
   const archiveCost = calculateArchiveCost(archiveGB);
-  const archiveRetrievalCost = archiveGB * 0.1 * 0.0025; // 10% of archive GB * $0.0025/GB
+  const archiveRetrievalCost = calculateRetrievalCost(archiveGB * 0.1); // 10% of archive GB for retrieval
   const totalCost = standardCost + archiveCost + archiveRetrievalCost;
 
   // Convert currency when currency changes or when user enters values
   useEffect(() => {
-    if (selectedCurrency !== 'usd' && !exchangeRate && !loading) {
+    if (selectedCurrency !== 'usd' && !exchangeRate && !currencyLoading) {
       // Convert a sample amount to get the exchange rate
       convertCurrency(1);
     }
-  }, [selectedCurrency, exchangeRate, loading]);
+  }, [selectedCurrency, exchangeRate, currencyLoading]);
 
   // Handle currency selection
   const handleCurrencyChange = (currencyCode: string) => {
@@ -301,9 +257,9 @@ const PricingPage: React.FC = () => {
               )}
 
               {/* Error Message */}
-              {error && (
+              {(currencyError || costsError) && (
                 <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-lg">
-                  <p className="text-red-300 text-sm">{error}</p>
+                  <p className="text-red-300 text-sm">{currencyError || costsError}</p>
                 </div>
               )}
               
@@ -331,7 +287,7 @@ const PricingPage: React.FC = () => {
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-white mb-1">
-                        {loading ? (
+                        {(currencyLoading || costsLoading) ? (
                           <span className="text-gray-400">Loading...</span>
                         ) : standardCost > 0 ? (
                           getFormattedPrice(standardCost)
@@ -367,7 +323,7 @@ const PricingPage: React.FC = () => {
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-white mb-1">
-                        {loading ? (
+                        {(currencyLoading || costsLoading) ? (
                           <span className="text-gray-400">Loading...</span>
                         ) : archiveCost > 0 ? (
                           getFormattedPrice(archiveCost)
@@ -390,9 +346,8 @@ const PricingPage: React.FC = () => {
                   <div>
                     <h4 className="text-lg font-semibold text-white mb-3">What is Archive Storage?</h4>
                     <p className="text-gray-300 leading-relaxed">
-                      Archive storage is a cost-effective option for long-term data storage. Everything you upload can be archived, 
-                      which costs <span className="text-white font-semibold">10x less</span> than standard storage. However, archived data 
-                      cannot be accessed immediately. You need to make a request, and after <span className="text-white font-semibold">2 days</span>, 
+                      Archive storage is a cost-effective option for long-term data storage. Everything you upload can be archived. 
+                      However, archived data cannot be accessed immediately. You need to make a request, and after <span className="text-white font-semibold">2 days</span>, 
                       you'll be able to view your archived data. Perfect for backup files, old photos, and data you don't need frequent access to.
                     </p>
                   </div>
@@ -410,7 +365,7 @@ const PricingPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="text-center">
                     <div className="text-4xl font-bold text-white mb-2">
-                      {loading ? (
+                      {(currencyLoading || costsLoading) ? (
                         <span className="text-gray-400">Loading...</span>
                       ) : (standardCost + archiveCost) > 0 ? (
                         getFormattedPrice(standardCost + archiveCost)
@@ -425,14 +380,14 @@ const PricingPage: React.FC = () => {
                     <div className="text-center">
                       <div className="text-sm text-gray-300 mb-2">If you retrieve 10% of archive data then:</div>
                       <div className="text-lg font-semibold text-white mb-1">
-                        Retrieval cost: {loading ? (
+                        Retrieval cost: {(currencyLoading || costsLoading) ? (
                           <span className="text-gray-400">Loading...</span>
                         ) : (
                           getFormattedPrice(archiveRetrievalCost)
                         )}
                       </div>
                       <div className="text-xl font-bold text-white">
-                        Total: {loading ? (
+                        Total: {(currencyLoading || costsLoading) ? (
                           <span className="text-gray-400">Loading...</span>
                         ) : (
                           getFormattedPrice(totalCost)
@@ -452,74 +407,62 @@ const PricingPage: React.FC = () => {
                       <Zap className="w-4 h-4" />
                       Standard Storage
                     </h5>
-                                         <div className="space-y-2 text-sm">
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">0-10GB</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.035' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.035 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.035`}/GB
-                         </span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">10-30GB</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.033' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.033 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.033`}/GB
-                         </span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">30GB+</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.03' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.03 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.03`}/GB
-                         </span>
-                       </div>
-                     </div>
+                    <div className="space-y-2 text-sm">
+                      {costs?.standard_storage.tiers.map((tier, index) => (
+                        <div key={index} className="flex justify-between">
+                          <span className="text-gray-300">
+                            {tier.min_gb}-{tier.max_gb === null ? '∞' : tier.max_gb}GB
+                          </span>
+                          <span className="text-white">
+                            {selectedCurrency === 'usd' ? `$${tier.cost_per_gb.toFixed(4)}` : 
+                              exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(tier.cost_per_gb * exchangeRate.rate).toFixed(4)}` : 
+                              `${currentCurrencyInfo?.symbol || '$'}${tier.cost_per_gb.toFixed(4)}`}/GB
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <h5 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                       <Archive className="w-4 h-4" />
                       Archive Storage
                     </h5>
-                                         <div className="space-y-2 text-sm">
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">0-10GB</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.0035' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.0035 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.0035`}/GB
-                         </span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">10-30GB</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.0033' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.0033 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.0033`}/GB
-                         </span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">30GB+</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.003' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.003 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.003`}/GB
-                         </span>
-                       </div>
-                       <div className="border-t border-white/10 my-2"></div>
-                       <div className="flex justify-between">
-                         <span className="text-gray-300">Retrieval Cost</span>
-                         <span className="text-white">
-                           {selectedCurrency === 'usd' ? '$0.0025' : 
-                             exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(0.0025 * exchangeRate.rate).toFixed(4)}` : 
-                             `${currentCurrencyInfo?.symbol || '$'}0.0025`}/GB
-                         </span>
-                       </div>
-                     </div>
+                    <div className="space-y-2 text-sm">
+                      {costs?.archive_storage.tiers.map((tier, index) => (
+                        <div key={index} className="flex justify-between">
+                          <span className="text-gray-300">
+                            {tier.min_gb}-{tier.max_gb === null ? '∞' : tier.max_gb}GB
+                          </span>
+                          <span className="text-white">
+                            {selectedCurrency === 'usd' ? `$${tier.cost_per_gb.toFixed(4)}` : 
+                              exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${(tier.cost_per_gb * exchangeRate.rate).toFixed(4)}` : 
+                              `${currentCurrencyInfo?.symbol || '$'}${tier.cost_per_gb.toFixed(4)}`}/GB
+                          </span>
+                        </div>
+                      ))}
+                      <div className="border-t border-white/10 my-2"></div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">Retrieval Cost</span>
+                        <span className="text-white">
+                          {selectedCurrency === 'usd' ? `$${costs?.retrieval.cost_per_gb.toFixed(4) || '0.0025'}` : 
+                            exchangeRate ? `${currentCurrencyInfo?.symbol || ''}${((costs?.retrieval.cost_per_gb || 0.0025) * exchangeRate.rate).toFixed(4)}` : 
+                            `${currentCurrencyInfo?.symbol || '$'}${costs?.retrieval.cost_per_gb.toFixed(4) || '0.0025'}`}/GB
+                        </span>
+                      </div>
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Minimum Billable Storage Notice */}
+              <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-yellow-300 text-sm font-bold">!</span>
+                  </div>
+                  <p className="text-yellow-300 text-sm">
+                    <span className="font-semibold">Minimum Billable Storage:</span> Files smaller than 128KB will be billed as if they were 128KB in size. Thumbnail charges will be added as well.
+                  </p>
                 </div>
               </div>
             </div>
