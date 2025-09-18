@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Trash2, RotateCcw, AlertTriangle, Clock, Folder, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, RotateCcw, AlertTriangle, Clock, Folder, Eye, EyeOff, CheckSquare, Square } from 'lucide-react';
 import { useTrash } from '../hooks/useTrash';
 import { FileCard } from './FileCard';
 import { Header } from './Header';
@@ -22,6 +22,14 @@ export const RecycleBin = () => {
   const [sortBy, setSortBy] = useState('deleted_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Multi-select state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [showMassRestoreDialog, setShowMassRestoreDialog] = useState(false);
+  const [showMassDeleteDialog, setShowMassDeleteDialog] = useState(false);
+  const [isMassRestoring, setIsMassRestoring] = useState(false);
+  const [isMassDeleting, setIsMassDeleting] = useState(false);
 
   const {
     files,
@@ -99,6 +107,101 @@ export const RecycleBin = () => {
     updateSort(newSortBy, newSortOrder as 'asc' | 'desc');
   };
 
+  // Multi-select handlers
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      // Clear selections when exiting selection mode
+      setSelectedFiles(new Set());
+    }
+  };
+
+  const toggleFileSelection = (fileId: string) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(fileId)) {
+      newSelected.delete(fileId);
+    } else {
+      newSelected.add(fileId);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const selectAll = () => {
+    const allFileIds = new Set(filteredFiles.map(f => f._id));
+    setSelectedFiles(allFileIds);
+  };
+
+  const getTotalSelected = () => selectedFiles.size;
+
+  // Mass operations
+  const handleMassRestore = async () => {
+    setIsMassRestoring(true);
+    try {
+      const selectedFileIds = Array.from(selectedFiles);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const fileId of selectedFileIds) {
+        try {
+          const success = await restoreFile(fileId);
+          if (success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to restore file ${fileId}:`, error);
+          failCount++;
+        }
+      }
+
+      // Clear selections after operation
+      setSelectedFiles(new Set());
+      setShowMassRestoreDialog(false);
+      
+      // Show result message (you could add a toast notification here)
+      console.log(`Restored ${successCount} files, ${failCount} failed`);
+    } catch (error) {
+      console.error('Error during mass restore:', error);
+    } finally {
+      setIsMassRestoring(false);
+    }
+  };
+
+  const handleMassDelete = async () => {
+    setIsMassDeleting(true);
+    try {
+      const selectedFileIds = Array.from(selectedFiles);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const fileId of selectedFileIds) {
+        try {
+          const success = await permanentDeleteFile(fileId);
+          if (success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to delete file ${fileId}:`, error);
+          failCount++;
+        }
+      }
+
+      // Clear selections after operation
+      setSelectedFiles(new Set());
+      setShowMassDeleteDialog(false);
+      
+      // Show result message (you could add a toast notification here)
+      console.log(`Deleted ${successCount} files, ${failCount} failed`);
+    } catch (error) {
+      console.error('Error during mass delete:', error);
+    } finally {
+      setIsMassDeleting(false);
+    }
+  };
+
   // Infinite scroll
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
@@ -164,6 +267,40 @@ export const RecycleBin = () => {
                 <Clock className="w-4 h-4" />
                 <span>Items deleted after 30 days</span>
               </div>
+              
+              {/* Selection mode toggle */}
+              <button
+                onClick={toggleSelectionMode}
+                className={`flex items-center justify-center w-8 h-8 rounded border border-gray-600/20 bg-gray-800/20 hover:bg-gray-700/30 transition-colors ${isSelectionMode ? 'text-blue-400 border-blue-400' : 'text-gray-300'}`}
+                title={isSelectionMode ? 'Exit Selection Mode' : 'Enable Selection Mode'}
+                aria-pressed={isSelectionMode}
+                style={{ minWidth: 32, minHeight: 32 }}
+              >
+                {isSelectionMode ? <CheckSquare size={20} /> : <Square size={20} />}
+              </button>
+
+              {/* Mass action buttons */}
+              {isSelectionMode && getTotalSelected() > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowMassRestoreDialog(true)}
+                    disabled={isMassRestoring}
+                    className="flex items-center gap-2 px-3 py-2 text-green-300 bg-green-800/20 rounded-lg border border-green-600/40 hover:bg-green-700/20 hover:border-green-500/40 transition-all duration-200 disabled:opacity-50 shadow-lg backdrop-blur-sm"
+                  >
+                    <RotateCcw className={`w-4 h-4 ${isMassRestoring ? 'animate-spin' : ''}`} />
+                    Restore ({getTotalSelected()})
+                  </button>
+                  <button
+                    onClick={() => setShowMassDeleteDialog(true)}
+                    disabled={isMassDeleting}
+                    className="flex items-center gap-2 px-3 py-2 text-red-300 bg-red-800/20 rounded-lg border border-red-600/40 hover:bg-red-700/20 hover:border-red-500/40 transition-all duration-200 disabled:opacity-50 shadow-lg backdrop-blur-sm"
+                  >
+                    <Trash2 className={`w-4 h-4 ${isMassDeleting ? 'animate-spin' : ''}`} />
+                    Delete ({getTotalSelected()})
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={refresh}
                 disabled={isLoading}
@@ -206,6 +343,25 @@ export const RecycleBin = () => {
             </div>
           </div>
 
+          {/* Selection Mode Actions Row */}
+          {isSelectionMode && getTotalSelected() > 0 && (
+            <div className="flex items-center gap-2 py-2 mb-2 overflow-x-auto w-full">
+              <button
+                onClick={selectAll}
+                className="text-gray-300 hover:text-white transition-colors bg-gray-800/20 backdrop-blur-sm p-2 rounded-lg flex items-center border border-gray-600/20 hover:bg-gray-700/30"
+                title="Select All"
+              >
+                <CheckSquare size={18} />
+              </button>
+              <span className="flex items-center gap-2 text-gray-400 text-base ml-2">
+                <span className="flex items-center gap-1">
+                  <Trash2 className="w-4 h-4" />
+                  {selectedFiles.size} selected
+                </span>
+              </span>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="mb-6 p-6 bg-gray-800/40 rounded-lg border border-gray-600/40 shadow-lg backdrop-blur-sm">
             <div className="flex items-center justify-between">
@@ -246,13 +402,44 @@ export const RecycleBin = () => {
             {filteredFiles.map((file, index) => (
               <div key={file._id} className="relative group">
                 <div className="relative">
+                  {/* Selection checkbox */}
+                  {isSelectionMode && (
+                    <div className="absolute top-2 left-2 z-20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFileSelection(file._id);
+                        }}
+                        className={`p-1 rounded border-2 transition-colors ${
+                          selectedFiles.has(file._id)
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-gray-800/80 border-gray-600 text-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        {selectedFiles.has(file._id) ? (
+                          <CheckSquare size={16} />
+                        ) : (
+                          <Square size={16} />
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   {/* File Card */}
                   <div
-                    onClick={() => handleFileClick(file, index)}
-                    className={`cursor-pointer transition-all duration-200 ${
-                      file.storage_type === 'STANDARD' 
-                        ? 'hover:scale-105 hover:shadow-lg' 
-                        : 'opacity-60 cursor-not-allowed'
+                    onClick={() => {
+                      if (isSelectionMode) {
+                        toggleFileSelection(file._id);
+                      } else {
+                        handleFileClick(file, index);
+                      }
+                    }}
+                    className={`transition-all duration-200 ${
+                      isSelectionMode 
+                        ? 'cursor-pointer' 
+                        : file.storage_type === 'STANDARD' 
+                          ? 'cursor-pointer hover:scale-105 hover:shadow-lg' 
+                          : 'opacity-60 cursor-not-allowed'
                     }`}
                   >
                     <FileCard file={file} />
@@ -260,7 +447,7 @@ export const RecycleBin = () => {
                   
                   {/* Storage Type Badge */}
                   {file.storage_type === 'DEEP_ARCHIVE' && (
-                    <div className="absolute top-2 left-2 bg-yellow-600/80 text-white text-xs px-2 py-1 rounded">
+                    <div className={`absolute top-2 bg-yellow-600/80 text-white text-xs px-2 py-1 rounded ${isSelectionMode ? 'left-10' : 'left-2'}`}>
                       Archived
                     </div>
                   )}
@@ -270,8 +457,9 @@ export const RecycleBin = () => {
                      {getDaysUntilDeletion(file.deleted_at)}d
                    </div>
                   
-                  {/* Action Buttons */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
+                  {/* Action Buttons - Only show when not in selection mode */}
+                  {!isSelectionMode && (
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
                     {file.storage_type === 'STANDARD' ? (
                       <button
                         onClick={(e) => {
@@ -315,7 +503,8 @@ export const RecycleBin = () => {
                     >
                       <Trash2 className={`w-4 h-4 ${isDeleting === file._id ? 'animate-spin' : ''}`} />
                     </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* File Info */}
@@ -385,6 +574,28 @@ export const RecycleBin = () => {
         title="Permanently Delete File"
         message={`Are you sure you want to permanently delete "${selectedFile?.filename}"? This action cannot be undone.`}
         confirmText="Delete Permanently"
+        variant="danger"
+      />
+
+      {/* Mass Restore Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showMassRestoreDialog}
+        onCancel={() => setShowMassRestoreDialog(false)}
+        onConfirm={handleMassRestore}
+        title="Restore Selected Files"
+        message={`Are you sure you want to restore ${selectedFiles.size} file${selectedFiles.size !== 1 ? 's' : ''}? The files will be moved back to their original folders.`}
+        confirmText={isMassRestoring ? "Restoring..." : "Restore"}
+        variant="info"
+      />
+
+      {/* Mass Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showMassDeleteDialog}
+        onCancel={() => setShowMassDeleteDialog(false)}
+        onConfirm={handleMassDelete}
+        title="Permanently Delete Selected Files"
+        message={`Are you sure you want to permanently delete ${selectedFiles.size} file${selectedFiles.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText={isMassDeleting ? "Deleting..." : "Delete Permanently"}
         variant="danger"
       />
     </div>
