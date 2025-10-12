@@ -76,7 +76,7 @@ function App() {
       setLoading(true)
       setError(null)
       const response = await fetch(
-        'http://localhost:8000/api/v1/cdn/urls?page=1&per_page=20&secret_key=E72E2FF3D6519451D82B5BAA15A11',
+        'https://api.vamory.vadaevri.com/api/v1/cdn/urls?page=1&per_page=20&secret_key=E72E2FF3D6519451D82B5BAA15A11',
         {
           credentials: 'include'
         }
