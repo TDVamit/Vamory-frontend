@@ -1,76 +1,319 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './hooks/useAuth';
-import { AuthForm } from './components/AuthForm';
-import { Gallery } from './components/Gallery';
-import { FolderView } from './components/FolderView';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { PublicFolderView } from './components/PublicFolderView';
-import HomePage from './components/HomePage';
-import PricingPage from './components/PricingPage';
-import { useAuth } from './hooks/useAuth';
-import './App.css';
+import { useState, useEffect, useRef } from 'react'
+import Hls from 'hls.js'
+import './App.css'
 
-// Component to handle root path redirect logic
-const RootRedirect = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen surface-dark flex items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-400 bg-gray-800/30 backdrop-blur-sm px-6 py-3 rounded-xl border border-gray-600/20">
-          <div className="w-8 h-8 border-2 border-gray-500/30 border-t-gray-400 rounded-full animate-spin" />
-          <span className="text-lg font-medium">Loading Vamory...</span>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isAuthenticated) {
-    return <Navigate to="/gallery" replace />;
-  } else {
-    return <Navigate to="/home" replace />;
-  }
-};
-
-function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Root path with conditional redirect */}
-          <Route path="/" element={<RootRedirect />} />
-          
-          {/* Public routes */}
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          
-          {/* Shared folder browsing routes (public, not wrapped in ProtectedRoute) */}
-          <Route path="/shared/folder" element={<PublicFolderView />} />
-          <Route path="/shared/folder/:params" element={<PublicFolderView />} />
-
-          {/* Auth-protected routes */}
-          <Route
-            path="/gallery"
-            element={
-              <ProtectedRoute>
-                <Gallery />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/folder/:folderId"
-            element={
-              <ProtectedRoute>
-                <FolderView />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<AuthForm />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      </AuthProvider>
-    </Router>
-  );
+interface Video {
+  id: string
+  s3_key: string
+  cdn_url: string
+  m3u8_url: string | null
+  created_at: string
+  uploaded_at: string
+  status: string
 }
 
-export default App;
+interface ApiResponse {
+  data: Video[]
+  meta: {
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+  }
+}
+
+interface QualityLevel {
+  height: number
+  bitrate: number
+  index: number
+}
+
+function App() {
+  const [videos, setVideos] = useState<Video[]>([])
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([])
+  const [currentQuality, setCurrentQuality] = useState<number>(-1)
+  const [showQualityMenu, setShowQualityMenu] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hlsRef = useRef<Hls | null>(null)
+
+  useEffect(() => {
+    fetchVideos()
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.quality-selector')) {
+        setShowQualityMenu(false)
+      }
+    }
+
+    if (showQualityMenu) {
+      document.addEventListener('click', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showQualityMenu])
+
+  useEffect(() => {
+    if (selectedVideo && selectedVideo.m3u8_url && videoRef.current) {
+      playVideo(selectedVideo.m3u8_url)
+    }
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+      }
+    }
+  }, [selectedVideo])
+
+  const fetchVideos = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch(
+        'http://localhost:8000/api/v1/cdn/urls?page=1&per_page=20&secret_key=E72E2FF3D6519451D82B5BAA15A11',
+        {
+          credentials: 'include'
+        }
+      )
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch videos')
+      }
+      
+      const data: ApiResponse = await response.json()
+      const videosWithM3u8 = data.data.filter(video => video.m3u8_url !== null)
+      setVideos(videosWithM3u8)
+      
+      // Auto-select first video if available
+      if (videosWithM3u8.length > 0) {
+        setSelectedVideo(videosWithM3u8[0])
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const playVideo = (m3u8Url: string) => {
+    if (!videoRef.current) return
+
+    // Clean up previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+    }
+
+    // Reset quality levels
+    setQualityLevels([])
+    setCurrentQuality(-1)
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+      })
+      
+      hls.loadSource(m3u8Url)
+      hls.attachMedia(videoRef.current)
+      
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Get available quality levels
+        const levels = hls.levels.map((level, index) => ({
+          height: level.height,
+          bitrate: level.bitrate,
+          index: index
+        }))
+        setQualityLevels(levels)
+        setCurrentQuality(hls.currentLevel)
+        videoRef.current?.play()
+      })
+      
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+        setCurrentQuality(data.level)
+      })
+      
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error('Network error:', data)
+              hls.startLoad()
+              break
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error('Media error:', data)
+              hls.recoverMediaError()
+              break
+            default:
+              console.error('Fatal error:', data)
+              break
+          }
+        }
+      })
+      
+      hlsRef.current = hls
+    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS support (Safari)
+      videoRef.current.src = m3u8Url
+      videoRef.current.play()
+    }
+  }
+
+  const handleQualityChange = (levelIndex: number) => {
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = levelIndex
+      setCurrentQuality(levelIndex)
+      setShowQualityMenu(false)
+    }
+  }
+
+  const getQualityLabel = (level: QualityLevel) => {
+    if (level.height >= 2160) return '4K'
+    if (level.height >= 1440) return '2K'
+    if (level.height >= 1080) return '1080p'
+    if (level.height >= 720) return '720p'
+    if (level.height >= 480) return '480p'
+    if (level.height >= 360) return '360p'
+    return `${level.height}p`
+  }
+
+  const handleVideoSelect = (video: Video) => {
+    setSelectedVideo(video)
+    setShowQualityMenu(false)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString()
+  }
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading">Loading videos...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+  return (
+      <div className="app">
+        <div className="error">
+          <h2>Error</h2>
+          <p>{error}</p>
+          <button onClick={fetchVideos}>Retry</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app">
+      <header className="header">
+        <h1>🎥 M3U8 Video Player</h1>
+        <p className="subtitle">{videos.length} videos available</p>
+      </header>
+
+      <div className="container">
+        <aside className="sidebar">
+          <h2>Video Library</h2>
+          <div className="video-list">
+            {videos.map((video) => (
+              <button
+                key={video.id}
+                className={`video-button ${selectedVideo?.id === video.id ? 'active' : ''}`}
+                onClick={() => handleVideoSelect(video)}
+              >
+                <div className="video-info">
+                  <div className="video-title">
+                    {video.s3_key.split('/').pop() || 'Unknown'}
+                  </div>
+                  <div className="video-meta">
+                    <span className={`status ${video.status.toLowerCase()}`}>
+                      {video.status}
+                    </span>
+                    <span className="date">{formatDate(video.created_at)}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <main className="player-section">
+          {selectedVideo ? (
+            <>
+              <div className="player-wrapper">
+                <video
+                  ref={videoRef}
+                  className="video-player"
+                  controls
+                  autoPlay
+                />
+                {qualityLevels.length > 0 && (
+                  <div className="quality-selector">
+                    <button
+                      className="quality-button"
+                      onClick={() => setShowQualityMenu(!showQualityMenu)}
+                    >
+                      ⚙️ Quality: {currentQuality === -1 ? 'Auto' : getQualityLabel(qualityLevels[currentQuality])}
+                    </button>
+                    {showQualityMenu && (
+                      <div className="quality-menu">
+                        <button
+                          className={`quality-option ${currentQuality === -1 ? 'active' : ''}`}
+                          onClick={() => handleQualityChange(-1)}
+                        >
+                          Auto
+                        </button>
+                        {qualityLevels
+                          .sort((a, b) => b.height - a.height)
+                          .map((level) => (
+                            <button
+                              key={level.index}
+                              className={`quality-option ${currentQuality === level.index ? 'active' : ''}`}
+                              onClick={() => handleQualityChange(level.index)}
+                            >
+                              {getQualityLabel(level)}
+                              <span className="quality-bitrate">
+                                {(level.bitrate / 1000000).toFixed(1)} Mbps
+                              </span>
+        </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="video-details">
+                <h3>Now Playing</h3>
+                <div className="detail-item">
+                  <strong>File:</strong> {selectedVideo.s3_key}
+                </div>
+                <div className="detail-item">
+                  <strong>ID:</strong> {selectedVideo.id}
+                </div>
+                <div className="detail-item">
+                  <strong>Status:</strong> {selectedVideo.status}
+                </div>
+                <div className="detail-item">
+                  <strong>Uploaded:</strong> {formatDate(selectedVideo.uploaded_at)}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="no-video">
+              <p>No videos available</p>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+export default App
