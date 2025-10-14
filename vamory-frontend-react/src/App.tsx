@@ -31,6 +31,9 @@ interface QualityLevel {
 function App() {
   const [videos, setVideos] = useState<Video[]>([])
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
+  const [viewMode, setViewMode] = useState<'library' | 'url'>('library')
+  const [customUrl, setCustomUrl] = useState<string>('')
+  const [currentSourceUrl, setCurrentSourceUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([])
@@ -61,15 +64,15 @@ function App() {
   }, [showQualityMenu])
 
   useEffect(() => {
-    if (selectedVideo && selectedVideo.m3u8_url && videoRef.current) {
-      playVideo(selectedVideo.m3u8_url)
+    if (currentSourceUrl && videoRef.current) {
+      playVideo(currentSourceUrl)
     }
     return () => {
       if (hlsRef.current) {
         hlsRef.current.destroy()
       }
     }
-  }, [selectedVideo])
+  }, [currentSourceUrl])
 
   const fetchVideos = async () => {
     try {
@@ -93,6 +96,7 @@ function App() {
       // Auto-select first video if available
       if (videosWithM3u8.length > 0) {
         setSelectedVideo(videosWithM3u8[0])
+        setCurrentSourceUrl(videosWithM3u8[0].m3u8_url as string)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -185,6 +189,16 @@ function App() {
   const handleVideoSelect = (video: Video) => {
     setSelectedVideo(video)
     setShowQualityMenu(false)
+    if (video.m3u8_url) {
+      setCurrentSourceUrl(video.m3u8_url)
+    }
+  }
+
+  const handlePlayCustomUrl = () => {
+    const trimmed = customUrl.trim()
+    if (!trimmed) return
+    setSelectedVideo(null)
+    setCurrentSourceUrl(trimmed)
   }
 
   const formatDate = (dateString: string) => {
@@ -216,36 +230,64 @@ function App() {
       <header className="header">
         <h1>🎥 M3U8 Video Player</h1>
         <p className="subtitle">{videos.length} videos available</p>
+        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setViewMode('library')}
+            className={viewMode === 'library' ? 'quality-button' : 'video-button'}
+          >
+            Library
+          </button>
+          <button
+            onClick={() => setViewMode('url')}
+            className={viewMode === 'url' ? 'quality-button' : 'video-button'}
+          >
+            URL Player
+          </button>
+        </div>
       </header>
 
-      <div className="container">
-        <aside className="sidebar">
-          <h2>Video Library</h2>
-          <div className="video-list">
-            {videos.map((video) => (
-              <button
-                key={video.id}
-                className={`video-button ${selectedVideo?.id === video.id ? 'active' : ''}`}
-                onClick={() => handleVideoSelect(video)}
-              >
-                <div className="video-info">
-                  <div className="video-title">
-                    {video.s3_key.split('/').pop() || 'Unknown'}
+      <div className="container" style={{ gridTemplateColumns: viewMode === 'url' ? '1fr' : undefined }}>
+        {viewMode === 'library' && (
+          <aside className="sidebar">
+            <h2>Video Library</h2>
+            <div className="video-list">
+              {videos.map((video) => (
+                <button
+                  key={video.id}
+                  className={`video-button ${selectedVideo?.id === video.id ? 'active' : ''}`}
+                  onClick={() => handleVideoSelect(video)}
+                >
+                  <div className="video-info">
+                    <div className="video-title">
+                      {video.s3_key.split('/').pop() || 'Unknown'}
+                    </div>
+                    <div className="video-meta">
+                      <span className={`status ${video.status.toLowerCase()}`}>
+                        {video.status}
+                      </span>
+                      <span className="date">{formatDate(video.created_at)}</span>
+                    </div>
                   </div>
-                  <div className="video-meta">
-                    <span className={`status ${video.status.toLowerCase()}`}>
-                      {video.status}
-                    </span>
-                    <span className="date">{formatDate(video.created_at)}</span>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </aside>
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
 
         <main className="player-section">
-          {selectedVideo ? (
+          {viewMode === 'url' && (
+            <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Paste an m3u8 URL here..."
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                style={{ flex: 1, padding: 8 }}
+              />
+              <button className="quality-button" onClick={handlePlayCustomUrl}>Play</button>
+            </div>
+          )}
+          {currentSourceUrl ? (
             <>
               <div className="player-wrapper">
                 <video
@@ -282,32 +324,34 @@ function App() {
                               <span className="quality-bitrate">
                                 {(level.bitrate / 1000000).toFixed(1)} Mbps
                               </span>
-        </button>
+                            </button>
                           ))}
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              <div className="video-details">
-                <h3>Now Playing</h3>
-                <div className="detail-item">
-                  <strong>File:</strong> {selectedVideo.s3_key}
+              {selectedVideo && (
+                <div className="video-details">
+                  <h3>Now Playing</h3>
+                  <div className="detail-item">
+                    <strong>File:</strong> {selectedVideo.s3_key}
+                  </div>
+                  <div className="detail-item">
+                    <strong>ID:</strong> {selectedVideo.id}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Status:</strong> {selectedVideo.status}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Uploaded:</strong> {formatDate(selectedVideo.uploaded_at)}
+                  </div>
                 </div>
-                <div className="detail-item">
-                  <strong>ID:</strong> {selectedVideo.id}
-                </div>
-                <div className="detail-item">
-                  <strong>Status:</strong> {selectedVideo.status}
-                </div>
-                <div className="detail-item">
-                  <strong>Uploaded:</strong> {formatDate(selectedVideo.uploaded_at)}
-                </div>
-              </div>
+              )}
             </>
           ) : (
             <div className="no-video">
-              <p>No videos available</p>
+              <p>No source selected</p>
             </div>
           )}
         </main>
