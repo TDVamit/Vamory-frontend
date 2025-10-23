@@ -106,70 +106,83 @@ function App() {
   }
 
   const playVideo = (m3u8Url: string) => {
-    if (!videoRef.current) return
-
+    if (!videoRef.current) return;
+  
     // Clean up previous HLS instance
     if (hlsRef.current) {
-      hlsRef.current.destroy()
+      hlsRef.current.destroy();
     }
-
+  
     // Reset quality levels
-    setQualityLevels([])
-    setCurrentQuality(-1)
-
+    setQualityLevels([]);
+    setCurrentQuality(-1);
+  
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        xhrSetup: function (xhr) {
-          xhr.withCredentials = true; // <- This tells hls.js to include cookies
+        xhrSetup: function (xhr, url) {
+          // Remove cookies (cross-domain iframe won't allow them)
+          xhr.withCredentials = false;
+  
+          // Append the same signature/query params from master.m3u8 to each segment
+          // Assume your master.m3u8 URL has ?Expires=...&Signature=...&Key-Pair-Id=...
+          const masterUrl = new URL(m3u8Url);
+          const segmentUrl = new URL(url, masterUrl.origin + masterUrl.pathname);
+  
+          // Copy query params from master.m3u8
+          masterUrl.searchParams.forEach((value, key) => {
+            segmentUrl.searchParams.set(key, value);
+          });
+  
+          xhr.open('GET', segmentUrl.toString(), true);
         }
-      })
-      
-      hls.loadSource(m3u8Url)
-      hls.attachMedia(videoRef.current)
-      
+      });
+  
+      hls.loadSource(m3u8Url);
+      hls.attachMedia(videoRef.current);
+  
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Get available quality levels
         const levels = hls.levels.map((level, index) => ({
           height: level.height,
           bitrate: level.bitrate,
           index: index
-        }))
-        setQualityLevels(levels)
-        setCurrentQuality(hls.currentLevel)
-        videoRef.current?.play()
-      })
-      
+        }));
+        setQualityLevels(levels);
+        setCurrentQuality(hls.currentLevel);
+        videoRef.current?.play();
+      });
+  
       hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
-        setCurrentQuality(data.level)
-      })
-      
+        setCurrentQuality(data.level);
+      });
+  
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.error('Network error:', data)
-              hls.startLoad()
-              break
+              console.error("Network error:", data);
+              hls.startLoad();
+              break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.error('Media error:', data)
-              hls.recoverMediaError()
-              break
+              console.error("Media error:", data);
+              hls.recoverMediaError();
+              break;
             default:
-              console.error('Fatal error:', data)
-              break
+              console.error("Fatal error:", data);
+              break;
           }
         }
-      })
-      
-      hlsRef.current = hls
-    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+      });
+  
+      hlsRef.current = hls;
+    } else if (videoRef.current.canPlayType("application/vnd.apple.mpegurl")) {
       // Native HLS support (Safari)
-      videoRef.current.src = m3u8Url
-      videoRef.current.play()
+      videoRef.current.src = m3u8Url;
+      videoRef.current.play();
     }
-  }
+  };
+  
 
   const handleQualityChange = (levelIndex: number) => {
     if (hlsRef.current) {
