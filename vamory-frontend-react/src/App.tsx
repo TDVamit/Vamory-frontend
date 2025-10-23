@@ -121,21 +121,20 @@ function App() {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        xhrSetup: function (xhr, url) {
+        xhrSetup: function (xhr, _url) {
           // Remove cookies (cross-domain iframe won't allow them)
           xhr.withCredentials = false;
   
-          // Append the same signature/query params from master.m3u8 to each segment
-          // Assume your master.m3u8 URL has ?Expires=...&Signature=...&Key-Pair-Id=...
-          const masterUrl = new URL(m3u8Url);
-          const segmentUrl = new URL(url, masterUrl.origin + masterUrl.pathname);
+          
+          // const masterUrl = new URL(m3u8Url);
+          // const segmentUrl = new URL(url, masterUrl.origin + masterUrl.pathname);
   
-          // Copy query params from master.m3u8
-          masterUrl.searchParams.forEach((value, key) => {
-            segmentUrl.searchParams.set(key, value);
-          });
+          // // Copy query params from master.m3u8
+          // masterUrl.searchParams.forEach((value, key) => {
+          //   segmentUrl.searchParams.set(key, value);
+          // });
   
-          xhr.open('GET', segmentUrl.toString(), true);
+          // xhr.open('GET', segmentUrl.toString(), true);
         }
       });
   
