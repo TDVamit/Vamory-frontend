@@ -123,7 +123,7 @@ function App() {
         lowLatencyMode: true,
         xhrSetup: function (xhr, _url) {
           // Remove cookies (cross-domain iframe won't allow them)
-          xhr.withCredentials = false;
+          xhr.withCredentials = true;
   
           
           // const masterUrl = new URL(m3u8Url);
