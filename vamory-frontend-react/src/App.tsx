@@ -121,6 +121,9 @@ function App() {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
+        xhrSetup: function (xhr) {
+          xhr.withCredentials = true; // <- This tells hls.js to include cookies
+        }
       })
       
       hls.loadSource(m3u8Url)
